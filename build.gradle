@@ -1,0 +1,23 @@
+buildscript {
+    ext {
+        compose_ui_version = '1.4.3'
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.20"
+    }
+}
+plugins {
+    id 'com.android.application' version '8.0.2' apply false
+    id 'com.android.library' version '8.0.2' apply false
+    id 'org.jetbrains.kotlin.android' version '1.8.20' apply false
+    id 'org.jlleitschuh.gradle.ktlint' version '11.3.2'
+    id 'org.jetbrains.dokka' version "1.8.20"
+}
+allprojects {
+    apply plugin: "org.jlleitschuh.gradle.ktlint"
+}
