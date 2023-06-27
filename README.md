@@ -35,7 +35,7 @@ Your app can consume the SDK directly through Maven Central; there is no additio
 
 ## Developer friendly
 
-We value the Android community and are big fans of following best practices and cutting edge technology. As such, our APIs utilise [Jetpack Compose](https://developer.android.com/jetpack/compose), [Kotlin Coroutine](https://kotlinlang.org/docs/coroutines-overview.html) and follow the [Kotlin Coding Convention](https://kotlinlang.org/docs/coding-conventions.html) , so usage will feel familiar.
+We value the Android community and are big fans of following best practices and cutting edge technology. As such, our APIs utilise [Jetpack Compose](https://developer.android.com/jetpack/compose), [Kotlin Coroutine](https://kotlinlang.org/docs/coroutines-overview.html) and follow the [Kotlin Coding Convention](https://kotlinlang.org/docs/coding-conventions.html), so usage will feel familiar.
 
 ## Feature-rich
 
@@ -119,7 +119,7 @@ cardManager.logInSession("{Token_retrieved_from_your_backend}")
 
 ## Get a list of cards
 
-Once you’ve authenticated the cardholder, and your application, you can return a list of non-sensitive card data using `getCards` for that cardholder.
+Once you’ve authenticated the cardholder and your application, you can return a list of non-sensitive card data using `getCards` for that cardholder.
 
 This returns the following card details:
 
@@ -196,7 +196,7 @@ Note: card states. There are 4 different card states, which apply to both virtua
 
 ## Retrieve Secure Data
 
-<sub> The following example covers PIN, but similar APIs are available for PAN, CVV, and PAN + CVV. The general flow remains the same. The only different is the API for PAN + CVV it will return a pair of view instead of one.</sub>
+<sub> The following example covers PIN, but similar APIs are available for PAN, CVV, and PAN + CVV. The general flow remains the same. The only different is the API for PAN + CVV it will return a pair of views instead of one.</sub>
 
 These calls are subject to a unique SCA flow prior to every individual call. Only on completion of a specific authentication can a single-use token be requested and provided to the SDK, in order to continue executing the request.
 
@@ -218,9 +218,9 @@ The UI component protects the value and safely delivers it to the user as the so
 
 ### Push Provisioning
 
-**Push Provisioning** is the operation of adding a physical or virtual card to a digital wallet. On Android, this means adding a card to the Google Wallet.
+**Push Provisioning** is the operation of adding a physical or virtual card to a digital wallet. On Android, this means adding a card to the Google Wallet so that card can be used for Google Pay.
 
-Enabling this operation is highly complex as it requires interaction between multiple entities including you, Checkout.com, Google Pay, and the card scheme (in our case, Mastercard). As such, push provisioning is subject to onboarding and can only be tested in your Production environment. For more details, speak to your operations contact.
+Enabling this operation is highly complex as it requires interaction between multiple entities including you, Checkout.com, Google Pay, and the card scheme (in our case, Mastercard). As such, push provisioning is subject to additional onboarding and can only be tested in your Production environment. For more details on onboarding, please speak to your operations contact.
 
 A typical call may look as follows:
 
