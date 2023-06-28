@@ -31,11 +31,11 @@ handle on your backend for authentication. You will be expected to manage [Stron
 
 ## Easy to integrate
 
-Your app can consume the SDK directly through Maven Central; there is no additional setup required, meaning you can get up and running quickly.
+Your app can consume the SDK directly through Maven Central; no additional setup is required, meaning you can get up and running quickly.
 
 ## Developer friendly
 
-We value the Android community and are big fans of following best practices and cutting edge technology. As such, our APIs utilise [Jetpack Compose](https://developer.android.com/jetpack/compose), [Kotlin Coroutine](https://kotlinlang.org/docs/coroutines-overview.html) and follow the [Kotlin Coding Convention](https://kotlinlang.org/docs/coding-conventions.html), so usage will feel familiar.
+We value the Android community and are big fans of following best practices and cutting-edge technology. As such, our APIs utilise [Jetpack Compose](https://developer.android.com/jetpack/compose), [Kotlin Coroutine](https://kotlinlang.org/docs/coroutines-overview.html) and follow the [Kotlin Coding Convention](https://kotlinlang.org/docs/coding-conventions.html), so usage will feel familiar.
 
 ## Feature-rich
 
@@ -90,7 +90,7 @@ import com.checkout.cardmanagement.CheckoutCardManager
 import com.checkout.cardmanagement.model.Environment
 
 class YourObject {
-  // Customizable UI properties for the secure components delivered by the SDK
+  // Customisable UI properties for the secure components delivered by the SDK
   private val cardManagerDesignSystem = CardManagementDesignSystem(
     textStyle = TextStyle(),
     panTextSeparator = "-"
@@ -100,7 +100,7 @@ class YourObject {
   private val cardManager = CheckoutCardManager(
     context = context,
     designSystem = cardManagerDesignSystem,
-    environment = Environment.SANDVBOX
+    environment = Environment.SANDBOX
   )
 }
 ```
@@ -119,7 +119,7 @@ cardManager.logInSession("{Token_retrieved_from_your_backend}")
 
 ## Get a list of cards
 
-Once you’ve authenticated the cardholder and your application, you can return a list of non-sensitive card data using `getCards` for that cardholder.
+Once you've authenticated the cardholder and your application, you can return a list of non-sensitive card data using `getCards` for that cardholder.
 
 This returns the following card details:
 
