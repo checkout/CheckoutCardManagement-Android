@@ -20,6 +20,7 @@ internal class CheckoutEventLogger @VisibleForTesting internal constructor(
 	private val logger: EventLogger
 ) : NetworkLogger {
 
+
 	internal constructor() : this(
 		LogEventUtils(),
 		EventLogger(com.checkout.cardmanagement.BuildConfig.PRODUCT_NAME).apply {
