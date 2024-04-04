@@ -242,7 +242,7 @@ card.provision(
 
 # Out-of-Band (OOB) Authentication
 
-Our CheckoutCardManagement-Android SDK is compatible with our Out-of-Band (OOB) Authentication solution, which is covered through our [OOB-Android SDK]([https://www.checkout.com/docs/payments/regulation-support/pci-compliance], and you can read integration details on that page. Checkout.com's OOB SDK enables you to seamlessly authenticate your cardholders within your Android app.
+Our CheckoutCardManagement-Android SDK is compatible with our Out-of-Band (OOB) Authentication solution, which is covered through our [OOB-Android SDK](https://github.com/checkout/oob-authentication-android), and you can read integration details on that page. Checkout.com's OOB SDK enables you to seamlessly authenticate your cardholders within your Android app.
 
 # Contact
 
