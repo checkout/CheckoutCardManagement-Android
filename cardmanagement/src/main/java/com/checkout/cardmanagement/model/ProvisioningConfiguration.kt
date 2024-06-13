@@ -10,41 +10,41 @@ package com.checkout.cardmanagement.model
  * @param digitalCardURL URL String for the Digital Service endpoint
  */
 public data class ProvisioningConfiguration(
-	internal val issuerID: String,
-	internal val serviceRSAExponent: ByteArray,
-	internal val serviceRSAModulus: ByteArray,
-	internal val serviceURL: String,
-	internal val digitalCardURL: String
+    internal val issuerID: String,
+    internal val serviceRSAExponent: ByteArray,
+    internal val serviceRSAModulus: ByteArray,
+    internal val serviceURL: String,
+    internal val digitalCardURL: String,
 ) {
-	override fun equals(other: Any?): Boolean {
-		if (this === other) return true
-		if (javaClass != other?.javaClass) return false
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
-		other as ProvisioningConfiguration
+        other as ProvisioningConfiguration
 
-		if (issuerID != other.issuerID) return false
-		if (!serviceRSAExponent.contentEquals(other.serviceRSAExponent)) return false
-		if (!serviceRSAModulus.contentEquals(other.serviceRSAModulus)) return false
-		if (serviceURL != other.serviceURL) return false
-		if (digitalCardURL != other.digitalCardURL) return false
+        if (issuerID != other.issuerID) return false
+        if (!serviceRSAExponent.contentEquals(other.serviceRSAExponent)) return false
+        if (!serviceRSAModulus.contentEquals(other.serviceRSAModulus)) return false
+        if (serviceURL != other.serviceURL) return false
+        if (digitalCardURL != other.digitalCardURL) return false
 
-		return true
-	}
+        return true
+    }
 
-	override fun hashCode(): Int {
-		var result = issuerID.hashCode()
-		result = 31 * result + serviceRSAExponent.contentHashCode()
-		result = 31 * result + serviceRSAModulus.contentHashCode()
-		result = 31 * result + serviceURL.hashCode()
-		result = 31 * result + digitalCardURL.hashCode()
-		return result
-	}
+    override fun hashCode(): Int {
+        var result = issuerID.hashCode()
+        result = 31 * result + serviceRSAExponent.contentHashCode()
+        result = 31 * result + serviceRSAModulus.contentHashCode()
+        result = 31 * result + serviceURL.hashCode()
+        result = 31 * result + digitalCardURL.hashCode()
+        return result
+    }
 
-	internal fun toNetworkConfig() = com.checkout.cardnetwork.data.core.ProvisioningConfiguration(
-		issuerID = this.issuerID,
-		serviceRSAExponent = this.serviceRSAExponent,
-		serviceRSAModulus = this.serviceRSAModulus,
-		serviceURL = this.serviceURL,
-		digitalCardURL = this.digitalCardURL
-	)
+    internal fun toNetworkConfig() = com.checkout.cardnetwork.data.core.ProvisioningConfiguration(
+        issuerID = this.issuerID,
+        serviceRSAExponent = this.serviceRSAExponent,
+        serviceRSAModulus = this.serviceRSAModulus,
+        serviceURL = this.serviceURL,
+        digitalCardURL = this.digitalCardURL,
+    )
 }
