@@ -17,38 +17,38 @@ import java.util.Calendar
 import com.checkout.eventlogger.CheckoutEventLogger as EventLogger
 
 internal class CheckoutEventLoggerTest {
-	private val logEventUtils: LogEventUtils = mock()
-	private val eventLogger: EventLogger = mock()
-	private val event: Event = mock()
-	private lateinit var logger: CheckoutEventLogger
+    private val logEventUtils: LogEventUtils = mock()
+    private val eventLogger: EventLogger = mock()
+    private val event: Event = mock()
+    private lateinit var logger: CheckoutEventLogger
 
-	@Before
-	fun setup() {
-		logger = CheckoutEventLogger(logEventUtils, eventLogger)
-	}
+    @Before
+    fun setup() {
+        logger = CheckoutEventLogger(logEventUtils, eventLogger)
+    }
 
-	@Test
-	fun `log event`() {
-		val startedAt = Calendar.getInstance()
-		val logEvent = LogEvent.Initialized(CardManagementDesignSystem(TextStyle()))
-		whenever(logEventUtils.buildEvent(logEvent, startedAt)).thenReturn(event)
+    @Test
+    fun `log event`() {
+        val startedAt = Calendar.getInstance()
+        val logEvent = LogEvent.Initialized(CardManagementDesignSystem(TextStyle()))
+        whenever(logEventUtils.buildEvent(logEvent, startedAt)).thenReturn(event)
 
-		logger.log(logEvent, startedAt)
-		verify(eventLogger).logEvent(event)
-	}
+        logger.log(logEvent, startedAt)
+        verify(eventLogger).logEvent(event)
+    }
 
-	@Test
-	fun `log error with source`() {
-		val eventCaptor = argumentCaptor<LogEvent.Failure>()
-		val additionalInfo = mapOf("KEY" to "VALUE", "source" to "GET PIN")
-		whenever(logEventUtils.buildEvent(any(), eq(null), eq(additionalInfo)))
-			.thenReturn(event)
+    @Test
+    fun `log error with source`() {
+        val eventCaptor = argumentCaptor<LogEvent.Failure>()
+        val additionalInfo = mapOf("KEY" to "VALUE", "source" to "GET PIN")
+        whenever(logEventUtils.buildEvent(any(), eq(null), eq(additionalInfo)))
+            .thenReturn(event)
 
-		logger.log(CardNetworkError.Unauthenticated, additionalInfo)
-		verify(logEventUtils).buildEvent(eventCaptor.capture(), eq(null), eq(additionalInfo))
+        logger.log(CardNetworkError.Unauthenticated, additionalInfo)
+        verify(logEventUtils).buildEvent(eventCaptor.capture(), eq(null), eq(additionalInfo))
 
-		assertEquals(CardNetworkError.Unauthenticated, eventCaptor.firstValue.error)
-		assertEquals("GET PIN", eventCaptor.firstValue.source)
-		verify(eventLogger).logEvent(event)
-	}
+        assertEquals(CardNetworkError.Unauthenticated, eventCaptor.firstValue.error)
+        assertEquals("GET PIN", eventCaptor.firstValue.source)
+        verify(eventLogger).logEvent(event)
+    }
 }

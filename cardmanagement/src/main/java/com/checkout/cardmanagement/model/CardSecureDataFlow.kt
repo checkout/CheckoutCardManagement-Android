@@ -18,81 +18,81 @@ import java.util.Calendar
  * Request a AbstractComposeView containing pin number for the card
  */
 public fun Card.getPin(
-	singleUseToken: String,
-	completionHandler: SecureResultCompletion
+    singleUseToken: String,
+    completionHandler: SecureResultCompletion,
 ): Unit = getSecureData(
-	logger = manager.logger,
-	successLogEvent = LogEvent.GetPin(partIdentifier, state),
-	logEventSource = GET_PIN,
-	completionHandler = completionHandler,
-	displaySecureData = {
-		manager.service.displayPin(
-			cardId = id,
-			singleUseToken = singleUseToken,
-			pinViewConfiguration = manager.designSystem.pinViewConfig
-		)
-	}
+    logger = manager.logger,
+    successLogEvent = LogEvent.GetPin(partIdentifier, state),
+    logEventSource = GET_PIN,
+    completionHandler = completionHandler,
+    displaySecureData = {
+        manager.service.displayPin(
+            cardId = id,
+            singleUseToken = singleUseToken,
+            pinViewConfiguration = manager.designSystem.pinViewConfig,
+        )
+    },
 )
 
 /**
  * Request a AbstractComposeView containing long card number for the card
  */
 public fun Card.getPan(
-	singleUseToken: String,
-	completionHandler: SecureResultCompletion
+    singleUseToken: String,
+    completionHandler: SecureResultCompletion,
 ): Unit = getSecureData(
-	logger = manager.logger,
-	successLogEvent = LogEvent.GetPan(partIdentifier, state),
-	logEventSource = GET_PAN,
-	completionHandler = completionHandler,
-	displaySecureData = {
-		manager.service.displayPan(
-			cardId = id,
-			singleUseToken = singleUseToken,
-			panTextViewConfiguration = manager.designSystem.panViewConfig
-		)
-	}
+    logger = manager.logger,
+    successLogEvent = LogEvent.GetPan(partIdentifier, state),
+    logEventSource = GET_PAN,
+    completionHandler = completionHandler,
+    displaySecureData = {
+        manager.service.displayPan(
+            cardId = id,
+            singleUseToken = singleUseToken,
+            panTextViewConfiguration = manager.designSystem.panViewConfig,
+        )
+    },
 )
 
 /**
  * Request a AbstractComposeView containing security code for the card
  */
 public fun Card.getSecurityCode(
-	singleUseToken: String,
-	completionHandler: SecureResultCompletion
+    singleUseToken: String,
+    completionHandler: SecureResultCompletion,
 ): Unit = getSecureData(
-	logger = manager.logger,
-	successLogEvent = LogEvent.GetCVV(partIdentifier, state),
-	logEventSource = GET_CVV,
-	completionHandler = completionHandler,
-	displaySecureData = {
-		manager.service.displaySecurityCode(
-			cardId = id,
-			singleUseToken = singleUseToken,
-			securityCodeViewConfiguration = manager.designSystem.securityCodeViewConfig
-		)
-	}
+    logger = manager.logger,
+    successLogEvent = LogEvent.GetCVV(partIdentifier, state),
+    logEventSource = GET_CVV,
+    completionHandler = completionHandler,
+    displaySecureData = {
+        manager.service.displaySecurityCode(
+            cardId = id,
+            singleUseToken = singleUseToken,
+            securityCodeViewConfiguration = manager.designSystem.securityCodeViewConfig,
+        )
+    },
 )
 
 /**
  * Request a pair of AbstractComposeView containing PAN and security code for the card
  */
 public fun Card.getPANAndSecurityCode(
-	singleUseToken: String,
-	completionHandler: SecurePropertiesResultCompletion
+    singleUseToken: String,
+    completionHandler: SecurePropertiesResultCompletion,
 ): Unit = getSecureData(
-	logger = manager.logger,
-	successLogEvent = LogEvent.GetPanCVV(partIdentifier, state),
-	logEventSource = GET_PAN_AND_CVV,
-	completionHandler = completionHandler,
-	displaySecureData = {
-		manager.service.displayPANAndSecurityCode(
-			cardId = id,
-			singleUseToken = singleUseToken,
-			panTextViewConfiguration = manager.designSystem.panViewConfig,
-			securityCodeViewConfiguration = manager.designSystem.securityCodeViewConfig
-		)
-	}
+    logger = manager.logger,
+    successLogEvent = LogEvent.GetPanCVV(partIdentifier, state),
+    logEventSource = GET_PAN_AND_CVV,
+    completionHandler = completionHandler,
+    displaySecureData = {
+        manager.service.displayPANAndSecurityCode(
+            cardId = id,
+            singleUseToken = singleUseToken,
+            panTextViewConfiguration = manager.designSystem.panViewConfig,
+            securityCodeViewConfiguration = manager.designSystem.securityCodeViewConfig,
+        )
+    },
 )
 
 /**
@@ -104,31 +104,31 @@ public fun Card.getPANAndSecurityCode(
  * @param completionHandler to handle the outcome of the display request
  */
 private fun <T> getSecureData(
-	logger: CheckoutEventLogger,
-	logEventSource: String,
-	successLogEvent: LogEvent,
-	displaySecureData: () -> Flow<Result<T>>,
-	completionHandler: (Result<T>) -> Unit
+    logger: CheckoutEventLogger,
+    logEventSource: String,
+    successLogEvent: LogEvent,
+    displaySecureData: () -> Flow<Result<T>>,
+    completionHandler: (Result<T>) -> Unit,
 ) {
-	runBlocking {
-		launch {
-			val startTime = Calendar.getInstance()
-			displaySecureData()
-				.catch { error ->
-					logger.log(LogEvent.Failure(logEventSource, error), startTime)
-					completionHandler(Result.failure(error.toCardManagementError()))
-				}
-				.collect { result ->
-					result.onSuccess {
-						logger.log(successLogEvent, startTime)
-						completionHandler(result)
-					}.onFailure { error ->
-						logger.log(LogEvent.Failure(logEventSource, error), startTime)
-						completionHandler(Result.failure(error.toCardManagementError()))
-					}
-				}
-		}
-	}
+    runBlocking {
+        launch {
+            val startTime = Calendar.getInstance()
+            displaySecureData()
+                .catch { error ->
+                    logger.log(LogEvent.Failure(logEventSource, error), startTime)
+                    completionHandler(Result.failure(error.toCardManagementError()))
+                }
+                .collect { result ->
+                    result.onSuccess {
+                        logger.log(successLogEvent, startTime)
+                        completionHandler(result)
+                    }.onFailure { error ->
+                        logger.log(LogEvent.Failure(logEventSource, error), startTime)
+                        completionHandler(Result.failure(error.toCardManagementError()))
+                    }
+                }
+        }
+    }
 }
 
 /**

@@ -19,41 +19,41 @@ import java.util.Calendar
  * @param completionHandler Completion Handler returning the outcome of the provisioning operation
  */
 public fun Card.provision(
-	activity: Activity,
-	cardholderId: String,
-	configuration: ProvisioningConfiguration,
-	token: String,
-	completionHandler: (Result<Unit>) -> Unit
+    activity: Activity,
+    cardholderId: String,
+    configuration: ProvisioningConfiguration,
+    token: String,
+    completionHandler: (Result<Unit>) -> Unit,
 ) {
-	runBlocking {
-		launch {
-			val startTime = Calendar.getInstance()
-			manager.service.addCardToGoogleWallet(
-				activity = activity,
-				cardId = id,
-				cardholderId = cardholderId,
-				configuration = configuration.toNetworkConfig(),
-				token = token
-			) { result ->
-				result.onSuccess {
-					manager.logger.log(
-						startedAt = startTime,
-						event = LogEvent.PushProvisioning(
-							partIdentifier,
-							cardholderId.takeLast(Card.PARTIAL_ID_DIGITS)
-						)
-					)
-					completionHandler(result)
-				}.onFailure {
-					manager.logger.log(
-						LogEvent.Failure(LogEventSource.PUSH_PROVISIONING, it),
-						startTime
-					)
-					completionHandler(Result.failure(it.toCardManagementError()))
-				}
-			}
-		}
-	}
+    runBlocking {
+        launch {
+            val startTime = Calendar.getInstance()
+            manager.service.addCardToGoogleWallet(
+                activity = activity,
+                cardId = id,
+                cardholderId = cardholderId,
+                configuration = configuration.toNetworkConfig(),
+                token = token,
+            ) { result ->
+                result.onSuccess {
+                    manager.logger.log(
+                        startedAt = startTime,
+                        event = LogEvent.PushProvisioning(
+                            partIdentifier,
+                            cardholderId.takeLast(Card.PARTIAL_ID_DIGITS),
+                        ),
+                    )
+                    completionHandler(result)
+                }.onFailure {
+                    manager.logger.log(
+                        LogEvent.Failure(LogEventSource.PUSH_PROVISIONING, it),
+                        startTime,
+                    )
+                    completionHandler(Result.failure(it.toCardManagementError()))
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -62,12 +62,12 @@ public fun Card.provision(
  * @param completionHandler Completion Handler returning the outcome of the activate operation
  */
 public fun Card.activate(completionHandler: (Result<Unit>) -> Unit) {
-	performCardManagementOperation(
-		CardState.ACTIVE,
-		completionHandler
-	) {
-		manager.service.activateCard(manager.sessionToken!!, id)
-	}
+    performCardManagementOperation(
+        CardState.ACTIVE,
+        completionHandler,
+    ) {
+        manager.service.activateCard(manager.sessionToken!!, id)
+    }
 }
 
 /**
@@ -77,17 +77,17 @@ public fun Card.activate(completionHandler: (Result<Unit>) -> Unit) {
  * @param completionHandler Completion Handler returning the outcome of the suspend operation
  */
 public fun Card.suspend(reason: CardSuspendReason?, completionHandler: (Result<Unit>) -> Unit) {
-	performCardManagementOperation(
-		CardState.SUSPENDED,
-		completionHandler,
-		reason?.value
-	) {
-		manager.service.suspendCard(
-			manager.sessionToken!!,
-			reason?.toCardNetworkSuspendReason(),
-			id
-		)
-	}
+    performCardManagementOperation(
+        CardState.SUSPENDED,
+        completionHandler,
+        reason?.value,
+    ) {
+        manager.service.suspendCard(
+            manager.sessionToken!!,
+            reason?.toCardNetworkSuspendReason(),
+            id,
+        )
+    }
 }
 
 /**
@@ -97,54 +97,54 @@ public fun Card.suspend(reason: CardSuspendReason?, completionHandler: (Result<U
  * @param completionHandler Completion Handler returning the outcome of the revoke operation
  */
 public fun Card.revoke(reason: CardRevokeReason?, completionHandler: (Result<Unit>) -> Unit) {
-	performCardManagementOperation(
-		CardState.REVOKED,
-		completionHandler,
-		reason?.value
-	) {
-		manager.service.revokeCard(manager.sessionToken!!, reason?.toCardNetworkRevokeReason(), id)
-	}
+    performCardManagementOperation(
+        CardState.REVOKED,
+        completionHandler,
+        reason?.value,
+    ) {
+        manager.service.revokeCard(manager.sessionToken!!, reason?.toCardNetworkRevokeReason(), id)
+    }
 }
 
 private fun Card.performCardManagementOperation(
-	targetCardState: CardState,
-	completionHandler: (Result<Unit>) -> Unit,
-	reason: String? = null,
-	operation: () -> Flow<Result<Unit>>
+    targetCardState: CardState,
+    completionHandler: (Result<Unit>) -> Unit,
+    reason: String? = null,
+    operation: () -> Flow<Result<Unit>>,
 ) {
-	when {
-		!state.getPossibleStateChanges().contains(targetCardState) ->
-			completionHandler(Result.failure(CardManagementError.InvalidStateRequested))
-		manager.sessionToken == null ->
-			completionHandler(Result.failure(CardManagementError.Unauthenticated))
-		else -> {
-			runBlocking {
-				launch {
-					val startTime = Calendar.getInstance()
-					operation().collect { result ->
-						result.onSuccess {
-							manager.logger.log(
-								LogEvent.StateManagement(
-									idLast4 = partIdentifier,
-									originalState = state,
-									requestedState = targetCardState,
-									reason = reason
-								),
-								startTime
-							)
-							completionHandler(Result.success(Unit))
-						}.onFailure { error ->
-							manager.logger.log(
-								LogEvent.Failure(targetCardState.toLogEventSource(), error),
-								startTime
-							)
-							completionHandler(Result.failure(error.toCardManagementError()))
-						}
-					}
-				}
-			}
-		}
-	}
+    when {
+        !state.getPossibleStateChanges().contains(targetCardState) ->
+            completionHandler(Result.failure(CardManagementError.InvalidStateRequested))
+        manager.sessionToken == null ->
+            completionHandler(Result.failure(CardManagementError.Unauthenticated))
+        else -> {
+            runBlocking {
+                launch {
+                    val startTime = Calendar.getInstance()
+                    operation().collect { result ->
+                        result.onSuccess {
+                            manager.logger.log(
+                                LogEvent.StateManagement(
+                                    idLast4 = partIdentifier,
+                                    originalState = state,
+                                    requestedState = targetCardState,
+                                    reason = reason,
+                                ),
+                                startTime,
+                            )
+                            completionHandler(Result.success(Unit))
+                        }.onFailure { error ->
+                            manager.logger.log(
+                                LogEvent.Failure(targetCardState.toLogEventSource(), error),
+                                startTime,
+                            )
+                            completionHandler(Result.failure(error.toCardManagementError()))
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -152,12 +152,12 @@ private fun Card.performCardManagementOperation(
  * [Activity.onActivityResult] to pass the content back to SDK for further processing.
  */
 public fun Card.handleCardResult(requestCode: Int, resultCode: Int, data: Intent?) {
-	manager.service.handleCardResult(requestCode, resultCode, data)
+    manager.service.handleCardResult(requestCode, resultCode, data)
 }
 
 private fun CardState.toLogEventSource(): String = when (this) {
-	CardState.ACTIVE -> LogEventSource.ACTIVATE_CARD
-	CardState.SUSPENDED -> LogEventSource.SUSPEND_CARD
-	CardState.REVOKED -> LogEventSource.REVOKE_CARD
-	else -> ""
+    CardState.ACTIVE -> LogEventSource.ACTIVATE_CARD
+    CardState.SUSPENDED -> LogEventSource.SUSPEND_CARD
+    CardState.REVOKED -> LogEventSource.REVOKE_CARD
+    else -> ""
 }

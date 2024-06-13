@@ -1,16 +1,18 @@
+# CheckoutCardManagement-Android SDK
+
 # Table of Contents
 - [What is the CheckoutCardManagement-Android SDK?](#What-is-the-CheckoutCardManagement-Android-SDK?)
 - [Environments](#Environments)
 - [Features](#Features)
 - [Requirements](#Requirements)
 - [Integration](#Integration)
-    - [Import SDK](#Import-SDK)
-    - [Prepare Card Manager](#Prepare-Card-Manager)
-    - [Login user](#Login-user)
-    - [Get a list of cards](#Get-a-list-of-cards)
-    - [Update card state](#Update-card-state)
-    - [Retrieve Secure Data](#Retrieve-secure-data)
-    - [Push Provisioning](#Push-provisioning)
+  - [Import SDK](#Import-SDK)
+  - [Prepare Card Manager](#Prepare-Card-Manager)
+  - [Login user](#Login-user)
+  - [Get a list of cards](#Get-a-list-of-cards)
+  - [Update card state](#Update-card-state)
+  - [Retrieve Secure Data](#Retrieve-secure-data)
+  - [Push Provisioning](#Push-provisioning)
 - [Contact](#Contact)
 ***
 
@@ -22,26 +24,27 @@ Our CheckoutCardManagement-Android SDK is the mobile gateway to our wider [card 
 
 # Environments
 
-The Android SDK supports 2 environments: Sandbox and Production. **CheckoutCardManager** powers the Sandbox and Production environments. Use of these environments requires onboarding with our operations team. During onboarding, you'll receive client credentials, which you will then need to
-handle on your backend for authentication. You will be expected to manage [Strong Custom Authentication (SCA) requirements](https://www.checkout.com/docs/payments/regulation-support/sca-compliance-guide) as part of accessing the SDK's functionality.
+The Android SDK supports 2 environments: Sandbox and Production, both powered by the **CheckoutCardManager** library.
+
+Use of these environments requires onboarding with our operations team. During onboarding, you'll receive client credentials, which you will then need to handle on your backend for authentication. You will be expected to manage [Strong Custom Authentication (SCA) requirements](https://www.checkout.com/docs/payments/regulation-support/sca-compliance-guide) as part of accessing the SDK's functionality.
 
 ***
 
 # Features
 
-## Easy to integrate
+### Easy to integrate
 
-Your app can consume the SDK directly through Maven Central; no additional setup is required, meaning you can get up and running quickly.
+Your app can consume the SDK directly through Maven Central; there is no additional setup required, meaning you can get up and running quickly.
 
-## Developer friendly
+### Developer friendly
 
-We value the Android community and are big fans of following best practices and cutting-edge technology. As such, our APIs utilise [Jetpack Compose](https://developer.android.com/jetpack/compose), [Kotlin Coroutine](https://kotlinlang.org/docs/coroutines-overview.html) and follow the [Kotlin Coding Convention](https://kotlinlang.org/docs/coding-conventions.html), so usage will feel familiar.
+We value the Android community and are big fans of following best practices and making use of cutting-edge technology. As such, our APIs utilise [Jetpack Compose](https://developer.android.com/jetpack/compose), [Kotlin Coroutine](https://kotlinlang.org/docs/coroutines-overview.html), and follow the [Kotlin Coding Convention](https://kotlinlang.org/docs/coding-conventions.html), so usage will feel familiar.
 
-## Feature-rich
+### Feature-rich
 
-Whether you're retrieving a list of cards for a cardholder, accessing sensitive card information, or adding a card to the Google wallet, our SDK makes it easy for you to provide this functionality to your users.
+Whether you're retrieving a list of cards for a cardholder, accessing sensitive card information, or adding a card to the Google Wallet, our SDK makes it easy for you to provide this functionality to your users.
 
-## Compliant
+### Compliant
 
 Using the SDK keeps you compliant with the [Payment Card Industry Data Security Standards (PCI DSS)](https://www.checkout.com/docs/payments/regulation-support/pci-compliance).
 
@@ -63,19 +66,23 @@ Each authentication session can be used to simultaneously generate multiple toke
 
 ## Import SDK
 
-Use Gradle to import the SDK into your app:
+Use Gradle to import the SDK into your app.
+
+In your project-level `build.gradle` file, add:
 
 ```gradle
-// in project build.gradle
 repositories {
     mavenCentral()
 }
+```
 
-// in app level build.gradle
+In your app-level `build.gradle` file, add:
+
+```gradle
 dependencies {
-    // Required for initialise the CardManagementDesignSystem
+    // Required to initialise the CardManagementDesignSystem
     implementation "androidx.compose.ui:ui:$compose_ui_version"
-    implementation 'com.checkout:checkout-sdk-card-management-android:$checkout_card_management_vesrion'
+    implementation 'com.checkout:checkout-sdk-card-management-android:$checkout_card_management_version'
 }
 ```
 
@@ -90,13 +97,13 @@ import com.checkout.cardmanagement.CheckoutCardManager
 import com.checkout.cardmanagement.model.Environment
 
 class YourObject {
-  // Customisable UI properties for the secure components delivered by the SDK
+  // Customisable properties for the secure UI components delivered by the SDK
   private val cardManagerDesignSystem = CardManagementDesignSystem(
     textStyle = TextStyle(),
     panTextSeparator = "-"
   )
 
-  // The core object through which the SDK's functionality is accessed 
+  // The object through which the SDK functionality is accessed 
   private val cardManager = CheckoutCardManager(
     context = context,
     designSystem = cardManagerDesignSystem,
@@ -123,11 +130,11 @@ Once you've authenticated the cardholder and your application, you can return a 
 
 This returns the following card details:
 
-- **Last 4 digits of the full card number**, also known as the Primary Account Number (PAN)
-- Card's **expiry date**
-- **Cardholder's** name
-- Card's **state** (inactive, active, suspended, or revoked)
-- A **unique ID** for each card returned
+- **last 4 digits of the full card number**, also known as the Primary Account Number (PAN)
+- card's **expiry date**
+- **cardholder's** name
+- card's **state** (inactive, active, suspended, or revoked)
+- a **unique ID** for each card returned
 
 ```Kotlin
 cardManager.getCards { result: Result<List<Card>> ->
@@ -142,9 +149,9 @@ cardManager.getCards { result: Result<List<Card>> ->
 
 ## Update Card State
 
-Card State Management API is an extension function of the `Card` class, so you must first obtain it from the SDK.
+The Card State Management API is an extension function of the `Card` class, so you must first obtain it from the SDK.
 
-Once you have the `Card` object, we would also suggest using the `card.possibleStateChanges` API for an improved user experience. Although it is not a hard requirement, You can request the possible new states from the card object before running the card management operation.
+Once you have the `Card` object, we would also suggest using the `card.possibleStateChanges` API for an improved user experience. Although it's not a hard requirement, you can request the possible new states from the card object before running the card management operation.
 
 ```Kotlin
 // This will return a list of possible states that the card can be transitioned to
@@ -157,7 +164,7 @@ if (possibleNewStates.contains(CardState.ACTIVE)) {
 
 // We can suspend the card, if the state was returned by possibleStateChanges
 if (possibleNewStates.contains(CardState.SUSPENDED)) {
-  // Pass an optional reason of why suspending card 
+  // You can choose to pass an optional reason for why you're suspending the card 
   val reason: CardSuspendReason? = CardSuspendReason.LOST
   card.suspend(reason, completionHandler)
 }
@@ -166,7 +173,7 @@ if (possibleNewStates.contains(CardState.SUSPENDED)) {
 if (possibleNewStates.contains(CardState.REVOKED)) {
   // This is a destructive and irreversible action - once revoked, the card cannot be reactivated
   // We recommended that you request UI confirmation that your user intended to perform this action
-  // Pass an optional reason of why revoking card
+  // You can choose to pass an optional reason for why you're revoking the card
   val reason: CardRevokeReason? = CardRevokeReason.STOLEN
   card.revoke(reason, completionHandler)
 }
@@ -185,14 +192,14 @@ fun cardStateChangeCompletionHandler(result: Result<Unit>): Unit {
 }
 ```
 
-Note: card states. There are 4 different card states, which apply to both virtual and physical cards. They are:
+There are 4 possible card states, which apply to both virtual and physical cards:
 
 | Status    | Description                                                                                                                                                                            |
 |-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| INACTIVE  | The card is awaiting activation and is unusable until then. By default, physical cards are set to `inactive` on creation. Cards cannot transition to `inactive` from any other status. |
-| ACTIVE    | The card can process transactions as normal. By default, virtual cards are set to `active` on creation.                                                                                |
-| SUSPENDED | Card has been manually suspended by the cardholder; transactions are temporarily blocked. The card can be reactivated to allow for normal use.                                         |
-| REVOKED   | Transactions are permanently blocked. The card cannot be reactivated from this status.                                                                                                 |
+| Inactive  | The card is awaiting activation and is unusable until then. By default, physical cards are set to `inactive` on creation. Cards cannot transition to `inactive` from any other status. |
+| Active    | The card can process transactions as normal. By default, virtual cards are set to `active` on creation.                                                                                |
+| Suspended | Card has been manually suspended by the cardholder; transactions are temporarily blocked. The card can be reactivated to allow for normal use.                                         |
+| Revoked   | Transactions are permanently blocked. The card cannot be reactivated from this status.                                                                                                 |
 
 ## Retrieve Secure Data
 
@@ -207,7 +214,7 @@ val singleUseToken = "{Single_use_token_retrieved_from_your_backend_after_SCA}"
 card.getPin(singleUseToken) { result: Result<AbstractComposeView> ->
   result
     .onSuccess {
-      // If successfully, you'll receive a Compose view contains the secure data that you can display to the user
+      // If successful, you'll receive a Compose view that contains the secure data that you can display to the user
     }.onFailure {
       // If something goes wrong, you'll receive an error with more details
     }
@@ -236,13 +243,9 @@ card.provision(
 )
 ```
 
-*If you're using the `CheckoutCardManagement` library, calling it without completing proper onboarding will result in an intentional crash.*
+When you attempt a push provisioning operation without completing proper onboarding will result in an intentional crash.
 
 ***
-
-# Out-of-Band (OOB) Authentication
-
-Our CheckoutCardManagement-Android SDK is compatible with our Out-of-Band (OOB) Authentication solution, which is covered through our [OOB-Android SDK](https://github.com/checkout/oob-authentication-android), and you can read integration details on that page. Checkout.com's OOB SDK enables you to seamlessly authenticate your cardholders within your Android app.
 
 # Contact
 

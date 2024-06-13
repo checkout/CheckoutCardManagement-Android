@@ -14,27 +14,27 @@ import com.checkout.cardnetwork.common.model.SecurityCodeViewConfiguration
  * @property panTextSeparator Text separator used to format the card number when displayed. Default is single space
  */
 public data class CardManagementDesignSystem(
-	private val pinTextStyle: TextStyle,
-	private val panTextStyle: TextStyle,
-	private val securityCodeTextStyle: TextStyle,
-	internal val panTextSeparator: String = " "
+    private val pinTextStyle: TextStyle,
+    private val panTextStyle: TextStyle,
+    private val securityCodeTextStyle: TextStyle,
+    internal val panTextSeparator: String = " ",
 ) {
-	public constructor(textStyle: TextStyle, panTextSeparator: String = " ") : this(
-		pinTextStyle = textStyle,
-		panTextStyle = textStyle,
-		securityCodeTextStyle = textStyle,
-		panTextSeparator = panTextSeparator
-	)
+    public constructor(textStyle: TextStyle, panTextSeparator: String = " ") : this(
+        pinTextStyle = textStyle,
+        panTextStyle = textStyle,
+        securityCodeTextStyle = textStyle,
+        panTextSeparator = panTextSeparator,
+    )
 
-	internal val panViewConfig by lazy {
-		PanViewConfiguration(panTextStyle, panTextSeparator)
-	}
+    internal val panViewConfig by lazy {
+        PanViewConfiguration(panTextStyle, panTextSeparator)
+    }
 
-	internal val pinViewConfig by lazy {
-		PinViewConfiguration(pinTextStyle)
-	}
+    internal val pinViewConfig by lazy {
+        PinViewConfiguration(pinTextStyle)
+    }
 
-	internal val securityCodeViewConfig by lazy {
-		SecurityCodeViewConfiguration(securityCodeTextStyle)
-	}
+    internal val securityCodeViewConfig by lazy {
+        SecurityCodeViewConfiguration(securityCodeTextStyle)
+    }
 }
