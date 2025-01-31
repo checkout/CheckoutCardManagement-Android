@@ -8,10 +8,10 @@ android {
     compileSdk 33
 
     defaultConfig {
-        minSdk 23
+        minSdk 24
         targetSdk 33
 
-        buildConfigField "String", 'APP_VERSION', '"1.0.1"'
+        buildConfigField "String", 'APP_VERSION', '"1.1.0"'
         buildConfigField "String", 'PRODUCT_NAME', '"issuing-android-sdk"'
         buildConfigField "Boolean", 'DEFAULT_LOGCAT_MONITORING_ENABLED', 'true'
 
