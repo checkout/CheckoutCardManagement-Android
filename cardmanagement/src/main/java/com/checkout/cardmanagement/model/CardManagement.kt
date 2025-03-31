@@ -10,18 +10,53 @@ import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 
 /**
+ * Request to get the card digitization state
+ *
+ * @param token Push Provisioning token formatted for the request
+ * @param completionHandler Completion Handler returning the outcome of the digitization state fetching operation
+ */
+public fun Card.getDigitizationState(
+    token: String,
+    completionHandler: (Result<DigitizationState>) -> Unit,
+) {
+    runBlocking {
+        launch {
+            val startTime = Calendar.getInstance()
+            manager.service.getCardDigitizationState(
+                cardId = id,
+                token = token,
+            ) { result ->
+                result.onSuccess { stateResult ->
+                    val cardDigitizationState = DigitizationState.from(stateResult)
+                    manager.logger.log(
+                        startedAt = startTime,
+                        event = LogEvent.GetCardDigitizationState(
+                            partIdentifier,
+                            cardDigitizationState,
+                        ),
+                    )
+                    completionHandler(Result.success(cardDigitizationState))
+                }.onFailure {
+                    manager.logger.log(
+                        LogEvent.Failure(LogEventSource.GET_CARD_DIGITIZATION_STATE, it),
+                        startTime,
+                    )
+                    completionHandler(Result.failure(it.toCardManagementError()))
+                }
+            }
+        }
+    }
+}
+
+/**
  * Request to add the provided card ID to the Google Wallet present on device
  *
  * @param activity the Activity for receiving callback
- * @param cardholderId Cardholder Identifier
- * @param configuration Provisioning Configuration shared during Onboarding
  * @param token Push Provisioning token formatted for the request
  * @param completionHandler Completion Handler returning the outcome of the provisioning operation
  */
 public fun Card.provision(
     activity: Activity,
-    cardholderId: String,
-    configuration: ProvisioningConfiguration,
     token: String,
     completionHandler: (Result<Unit>) -> Unit,
 ) {
@@ -31,8 +66,6 @@ public fun Card.provision(
             manager.service.addCardToGoogleWallet(
                 activity = activity,
                 cardId = id,
-                cardholderId = cardholderId,
-                configuration = configuration.toNetworkConfig(),
                 token = token,
             ) { result ->
                 result.onSuccess {
@@ -40,7 +73,6 @@ public fun Card.provision(
                         startedAt = startTime,
                         event = LogEvent.PushProvisioning(
                             partIdentifier,
-                            cardholderId.takeLast(Card.PARTIAL_ID_DIGITS),
                         ),
                     )
                     completionHandler(result)

@@ -59,6 +59,7 @@ internal class LogEventUtils {
         internal const val KEY_REASON = "reason"
         internal const val KEY_CARD = "card"
         internal const val KEY_CARDHOLDER = "cardholder"
+        internal const val KEY_CARD_DIGITIZATION_STATE = "digitization_state"
         internal const val KEY_ERROR = "error"
         internal const val KEY_DURATION = "duration"
         internal const val LOGGER_PRODUCTION_ID = "com.checkout.issuing-mobile-sdk"
@@ -72,6 +73,8 @@ internal class LogEventUtils {
             is LogEvent.GetCVV -> "card_cvv"
             is LogEvent.GetPanCVV -> "card_pan_cvv"
             is LogEvent.StateManagement -> "card_state_change"
+            is LogEvent.ConfigurePushProvisioning -> "configure_push_provisioning"
+            is LogEvent.GetCardDigitizationState -> "get_card_digitization_state"
             is LogEvent.PushProvisioning -> "push_provisioning"
             is LogEvent.Failure -> "failure"
         }
@@ -85,6 +88,8 @@ internal class LogEventUtils {
             is LogEvent.GetCVV,
             is LogEvent.GetPanCVV,
             is LogEvent.StateManagement,
+            is LogEvent.ConfigurePushProvisioning,
+            is LogEvent.GetCardDigitizationState,
             is LogEvent.PushProvisioning,
             -> MonitoringLevel.INFO
             is LogEvent.Failure -> MonitoringLevel.WARN
@@ -128,9 +133,17 @@ internal class LogEventUtils {
                     reason?.let { propertyMap[KEY_REASON] = it }
                 }
 
+                is LogEvent.ConfigurePushProvisioning -> {
+                    propertyMap[KEY_CARDHOLDER] = last4CardholderID
+                }
+
+                is LogEvent.GetCardDigitizationState -> {
+                    propertyMap[KEY_CARD] = last4CardID
+                    propertyMap[KEY_CARD_DIGITIZATION_STATE] = digitizationState
+                }
+
                 is LogEvent.PushProvisioning -> {
                     propertyMap[KEY_CARD] = last4CardID
-                    propertyMap[KEY_CARDHOLDER] = last4CardholderID
                 }
 
                 is LogEvent.Failure -> {
