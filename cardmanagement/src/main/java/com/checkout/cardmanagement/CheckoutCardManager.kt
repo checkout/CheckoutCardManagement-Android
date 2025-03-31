@@ -1,13 +1,16 @@
 package com.checkout.cardmanagement
 
+import android.app.Activity
 import android.content.Context
 import com.checkout.cardmanagement.logging.CheckoutEventLogger
 import com.checkout.cardmanagement.logging.LogEvent
+import com.checkout.cardmanagement.logging.LogEventSource
 import com.checkout.cardmanagement.logging.LogEventSource.GET_CARDS
 import com.checkout.cardmanagement.model.Card
 import com.checkout.cardmanagement.model.CardManagementDesignSystem
 import com.checkout.cardmanagement.model.CardManagementError
 import com.checkout.cardmanagement.model.Environment
+import com.checkout.cardmanagement.model.ProvisioningConfiguration
 import com.checkout.cardmanagement.model.parse
 import com.checkout.cardmanagement.model.toCardManagementError
 import com.checkout.cardnetwork.CardService
@@ -81,6 +84,43 @@ public class CheckoutCardManager internal constructor(
      */
     public fun logoutSession() {
         sessionToken = null
+    }
+
+    /**
+     * Configure the Push Provisioning Manager
+     */
+    public fun configurePushProvisioning(
+        activity: Activity,
+        cardholderId: String,
+        configuration: ProvisioningConfiguration,
+        completionHandler: (Result<Unit>) -> Unit,
+    ) {
+        runBlocking {
+            launch {
+                val startTime = Calendar.getInstance()
+                service.configurePushProvisioning(
+                    activity,
+                    cardholderId,
+                    configuration.toNetworkConfig(),
+                ) { result ->
+                    result.onSuccess {
+                        logger.log(
+                            startedAt = startTime,
+                            event = LogEvent.ConfigurePushProvisioning(
+                                cardholderId.takeLast(Card.PARTIAL_ID_DIGITS),
+                            ),
+                        )
+                        completionHandler(result)
+                    }.onFailure {
+                        logger.log(
+                            LogEvent.Failure(LogEventSource.CONFIGURE_PUSH_PROVISIONING, it),
+                            startTime,
+                        )
+                        completionHandler(Result.failure(it.toCardManagementError()))
+                    }
+                }
+            }
+        }
     }
 
     /**

@@ -11,7 +11,7 @@ android {
         minSdk 24
         targetSdk 33
 
-        buildConfigField "String", 'APP_VERSION', '"1.1.1"'
+        buildConfigField "String", 'APP_VERSION', '"2.0.0"'
         buildConfigField "String", 'PRODUCT_NAME', '"issuing-android-sdk"'
         buildConfigField "Boolean", 'DEFAULT_LOGCAT_MONITORING_ENABLED', 'true'
 

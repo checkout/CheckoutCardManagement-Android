@@ -2,6 +2,7 @@ package com.checkout.cardmanagement.logging
 
 import com.checkout.cardmanagement.model.CardManagementDesignSystem
 import com.checkout.cardmanagement.model.CardState
+import com.checkout.cardmanagement.model.DigitizationState
 
 /** Analytics event wrappers */
 internal sealed class LogEvent {
@@ -31,10 +32,20 @@ internal sealed class LogEvent {
         val reason: String?,
     ) : LogEvent()
 
+    /** Describe a Configure Push Provisioning event */
+    internal data class ConfigurePushProvisioning(
+        val last4CardholderID: String,
+    ) : LogEvent()
+
+    /** Describe a Get Card Digitization State event */
+    internal data class GetCardDigitizationState(
+        val last4CardID: String,
+        val digitizationState: DigitizationState,
+    ) : LogEvent()
+
     /** Describe a Push Provisioning event */
     internal data class PushProvisioning(
         val last4CardID: String,
-        val last4CardholderID: String,
     ) : LogEvent()
 
     /** Describe an unexpected but non critical failure */
@@ -47,6 +58,8 @@ internal object LogEventSource {
     internal const val GET_PIN = "Get Pin"
     internal const val GET_CVV = "Get Security Code"
     internal const val GET_PAN_AND_CVV = "Get Pan and SecurityCode"
+    internal const val CONFIGURE_PUSH_PROVISIONING = "Configure Push Provisioning"
+    internal const val GET_CARD_DIGITIZATION_STATE = "Get Card Digitization State"
     internal const val PUSH_PROVISIONING = "Push Provisioning"
     internal const val ACTIVATE_CARD = "Activate Card"
     internal const val SUSPEND_CARD = "Suspend Card"
