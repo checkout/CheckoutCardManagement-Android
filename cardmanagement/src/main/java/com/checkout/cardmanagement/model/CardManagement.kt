@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import com.checkout.cardmanagement.logging.LogEvent
 import com.checkout.cardmanagement.logging.LogEventSource
+import com.checkout.cardmanagement.logging.LogEventUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -26,23 +27,26 @@ public fun Card.getDigitizationState(
                 cardId = id,
                 token = token,
             ) { result ->
-                result.onSuccess { stateResult ->
-                    val cardDigitizationState = DigitizationState.from(stateResult)
-                    manager.logger.log(
-                        startedAt = startTime,
-                        event = LogEvent.GetCardDigitizationState(
-                            partIdentifier,
-                            cardDigitizationState,
-                        ),
-                    )
-                    completionHandler(Result.success(cardDigitizationState))
-                }.onFailure {
-                    manager.logger.log(
-                        LogEvent.Failure(LogEventSource.GET_CARD_DIGITIZATION_STATE, it),
-                        startTime,
-                    )
-                    completionHandler(Result.failure(it.toCardManagementError()))
-                }
+                result
+                    .onSuccess { stateResult ->
+                        val cardDigitizationState = DigitizationState.from(stateResult)
+                        manager.logger.log(
+                            startedAt = startTime,
+                            event =
+                                LogEvent.GetCardDigitizationState(
+                                    cardId = id,
+                                    cardDigitizationState,
+                                ),
+                        )
+                        completionHandler(Result.success(cardDigitizationState))
+                    }.onFailure {
+                        manager.logger.log(
+                            LogEvent.Failure(LogEventSource.GET_CARD_DIGITIZATION_STATE, it),
+                            startTime,
+                            mapOf(LogEventUtils.KEY_CARD_ID to id),
+                        )
+                        completionHandler(Result.failure(it.toCardManagementError()))
+                    }
             }
         }
     }
@@ -68,21 +72,24 @@ public fun Card.provision(
                 cardId = id,
                 token = token,
             ) { result ->
-                result.onSuccess {
-                    manager.logger.log(
-                        startedAt = startTime,
-                        event = LogEvent.PushProvisioning(
-                            partIdentifier,
-                        ),
-                    )
-                    completionHandler(result)
-                }.onFailure {
-                    manager.logger.log(
-                        LogEvent.Failure(LogEventSource.PUSH_PROVISIONING, it),
-                        startTime,
-                    )
-                    completionHandler(Result.failure(it.toCardManagementError()))
-                }
+                result
+                    .onSuccess {
+                        manager.logger.log(
+                            startedAt = startTime,
+                            event =
+                                LogEvent.PushProvisioning(
+                                    cardId = id,
+                                ),
+                        )
+                        completionHandler(result)
+                    }.onFailure {
+                        manager.logger.log(
+                            LogEvent.Failure(LogEventSource.PUSH_PROVISIONING, it),
+                            startTime,
+                            mapOf(LogEventUtils.KEY_CARD_ID to id),
+                        )
+                        completionHandler(Result.failure(it.toCardManagementError()))
+                    }
             }
         }
     }
@@ -108,7 +115,10 @@ public fun Card.activate(completionHandler: (Result<Unit>) -> Unit) {
  * @param reason Optional reason for the suspend operation
  * @param completionHandler Completion Handler returning the outcome of the suspend operation
  */
-public fun Card.suspend(reason: CardSuspendReason?, completionHandler: (Result<Unit>) -> Unit) {
+public fun Card.suspend(
+    reason: CardSuspendReason?,
+    completionHandler: (Result<Unit>) -> Unit,
+) {
     performCardManagementOperation(
         CardState.SUSPENDED,
         completionHandler,
@@ -128,7 +138,10 @@ public fun Card.suspend(reason: CardSuspendReason?, completionHandler: (Result<U
  * @param reason Optional reason for the revoke operation
  * @param completionHandler Completion Handler returning the outcome of the revoke operation
  */
-public fun Card.revoke(reason: CardRevokeReason?, completionHandler: (Result<Unit>) -> Unit) {
+public fun Card.revoke(
+    reason: CardRevokeReason?,
+    completionHandler: (Result<Unit>) -> Unit,
+) {
     performCardManagementOperation(
         CardState.REVOKED,
         completionHandler,
@@ -154,24 +167,25 @@ private fun Card.performCardManagementOperation(
                 launch {
                     val startTime = Calendar.getInstance()
                     operation().collect { result ->
-                        result.onSuccess {
-                            manager.logger.log(
-                                LogEvent.StateManagement(
-                                    idLast4 = partIdentifier,
-                                    originalState = state,
-                                    requestedState = targetCardState,
-                                    reason = reason,
-                                ),
-                                startTime,
-                            )
-                            completionHandler(Result.success(Unit))
-                        }.onFailure { error ->
-                            manager.logger.log(
-                                LogEvent.Failure(targetCardState.toLogEventSource(), error),
-                                startTime,
-                            )
-                            completionHandler(Result.failure(error.toCardManagementError()))
-                        }
+                        result
+                            .onSuccess {
+                                manager.logger.log(
+                                    LogEvent.StateManagement(
+                                        cardId = id,
+                                        originalState = state,
+                                        requestedState = targetCardState,
+                                        reason = reason,
+                                    ),
+                                    startTime,
+                                )
+                                completionHandler(Result.success(Unit))
+                            }.onFailure { error ->
+                                manager.logger.log(
+                                    LogEvent.Failure(targetCardState.toLogEventSource(), error),
+                                    startTime,
+                                )
+                                completionHandler(Result.failure(error.toCardManagementError()))
+                            }
                     }
                 }
             }
@@ -183,13 +197,18 @@ private fun Card.performCardManagementOperation(
  * Handle the [Card.provision] operation result in the passed [Activity], override
  * [Activity.onActivityResult] to pass the content back to SDK for further processing.
  */
-public fun Card.handleCardResult(requestCode: Int, resultCode: Int, data: Intent?) {
+public fun Card.handleCardResult(
+    requestCode: Int,
+    resultCode: Int,
+    data: Intent?,
+) {
     manager.service.handleCardResult(requestCode, resultCode, data)
 }
 
-private fun CardState.toLogEventSource(): String = when (this) {
-    CardState.ACTIVE -> LogEventSource.ACTIVATE_CARD
-    CardState.SUSPENDED -> LogEventSource.SUSPEND_CARD
-    CardState.REVOKED -> LogEventSource.REVOKE_CARD
-    else -> ""
-}
+private fun CardState.toLogEventSource(): String =
+    when (this) {
+        CardState.ACTIVE -> LogEventSource.ACTIVATE_CARD
+        CardState.SUSPENDED -> LogEventSource.SUSPEND_CARD
+        CardState.REVOKED -> LogEventSource.REVOKE_CARD
+        else -> ""
+    }

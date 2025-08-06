@@ -17,7 +17,8 @@ import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.sp
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_CARD
-import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_CARDHOLDER
+import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_CARD_ID
+import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_CARD_IDS
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_CARD_STATE
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_CVV_TEXT_STYLE
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_DESIGN
@@ -29,8 +30,6 @@ import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_PAN_TEXT_
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_PIN_TEXT_STYLE
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_REASON
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_SOURCE
-import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_SUFFIX_ID
-import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_SUFFIX_IDS
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_TO
 import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_VERSION
 import com.checkout.cardmanagement.model.CardManagementDesignSystem
@@ -117,7 +116,7 @@ internal class LogEventUtilsTest {
             buildInitializedEventAndGetDesignMap<Map<String, String>>(
                 panTextStyle = CUSTOMISED_TEXT_STYLE,
             )[KEY_PAN_TEXT_STYLE]
-            )!!.assertTextStyleProperties()
+        )!!.assertTextStyleProperties()
 
     @Test
     fun `assert Initialized to log customised pin text style`() =
@@ -134,14 +133,14 @@ internal class LogEventUtilsTest {
     @Test
     fun `assert CardList`() {
         utils.buildEvent(EVENT_CARD_LIST).properties.run {
-            assertEquals(listOf("111", "222", "333"), get(KEY_SUFFIX_IDS))
+            assertEquals(listOf("111", "222", "333"), get(KEY_CARD_IDS))
         }
     }
 
     @Test
     fun `assert GetPin`() {
         utils.buildEvent(EVENT_GET_PIN).properties.run {
-            assertEquals("1234", get(KEY_SUFFIX_ID))
+            assertEquals("1234", get(KEY_CARD_ID))
             assertEquals("active", get(KEY_CARD_STATE))
         }
     }
@@ -149,7 +148,7 @@ internal class LogEventUtilsTest {
     @Test
     fun `assert GetPan`() {
         utils.buildEvent(EVENT_GET_PAN).properties.run {
-            assertEquals("1234", get(KEY_SUFFIX_ID))
+            assertEquals("1234", get(KEY_CARD_ID))
             assertEquals("inactive", get(KEY_CARD_STATE))
         }
     }
@@ -157,7 +156,7 @@ internal class LogEventUtilsTest {
     @Test
     fun `assert GetCVV`() {
         utils.buildEvent(EVENT_GET_CVV).properties.run {
-            assertEquals("1234", get(KEY_SUFFIX_ID))
+            assertEquals("1234", get(KEY_CARD_ID))
             assertEquals("suspended", get(KEY_CARD_STATE))
         }
     }
@@ -165,7 +164,7 @@ internal class LogEventUtilsTest {
     @Test
     fun `assert GetPanCVV`() {
         utils.buildEvent(EVENT_GET_PAN_CVV).properties.run {
-            assertEquals("1234", get(KEY_SUFFIX_ID))
+            assertEquals("1234", get(KEY_CARD_ID))
             assertEquals("revoked", get(KEY_CARD_STATE))
         }
     }
@@ -174,7 +173,7 @@ internal class LogEventUtilsTest {
     fun `assert StateManagement`() {
         // with the reason
         utils.buildEvent(EVENT_STATE_MANAGEMENT).properties.run {
-            assertEquals("1234", get(KEY_SUFFIX_ID))
+            assertEquals("1234", get(KEY_CARD_ID))
             assertEquals("active", get(KEY_FROM))
             assertEquals("suspended", get(KEY_TO))
             assertEquals("REASON", get(KEY_REASON))
@@ -190,7 +189,6 @@ internal class LogEventUtilsTest {
     fun `assert PushProvisioning`() {
         utils.buildEvent(EVENT_PUSH_PROVISIONING).properties.run {
             assertEquals("1234", get(KEY_CARD))
-            assertEquals("5678", get(KEY_CARDHOLDER))
         }
     }
 
@@ -213,20 +211,26 @@ internal class LogEventUtilsTest {
 
     @Test
     fun `extraProperties should be added to the event log properties`() {
-        utils.buildEvent(
-            EVENT_INITIALIZE,
-            extraProperties = mapOf(
-                "KEY_1" to "VALUE_1",
-                "KEY_2" to "VALUE_2",
-            ),
-        ).properties.run {
-            assertEquals("VALUE_1", get("KEY_1"))
-            assertEquals("VALUE_2", get("KEY_2"))
-            assertEquals(null, get("KEY_3"))
-        }
+        utils
+            .buildEvent(
+                EVENT_INITIALIZE,
+                extraProperties =
+                    mapOf(
+                        "KEY_1" to "VALUE_1",
+                        "KEY_2" to "VALUE_2",
+                    ),
+            ).properties
+            .run {
+                assertEquals("VALUE_1", get("KEY_1"))
+                assertEquals("VALUE_2", get("KEY_2"))
+                assertEquals(null, get("KEY_3"))
+            }
     }
 
-    private fun assertDuration(durationMills: Int, expectedDuration: String) {
+    private fun assertDuration(
+        durationMills: Int,
+        expectedDuration: String,
+    ) {
         utils.buildEvent(EVENT_INITIALIZE, startedAt(durationMills)).properties.run {
             assertEquals(expectedDuration, get(KEY_DURATION))
         }
@@ -238,16 +242,17 @@ internal class LogEventUtilsTest {
         panTextStyle: TextStyle = TextStyle(),
         securityCodeTextStyle: TextStyle = TextStyle(),
         panTextSeparator: String = " ",
-    ) = utils.buildEvent(
-        LogEvent.Initialized(
-            CardManagementDesignSystem(
-                panTextSeparator = panTextSeparator,
-                panTextStyle = panTextStyle,
-                pinTextStyle = pinTextStyle,
-                securityCodeTextStyle = securityCodeTextStyle,
+    ) = utils
+        .buildEvent(
+            LogEvent.Initialized(
+                CardManagementDesignSystem(
+                    panTextSeparator = panTextSeparator,
+                    panTextStyle = panTextStyle,
+                    pinTextStyle = pinTextStyle,
+                    securityCodeTextStyle = securityCodeTextStyle,
+                ),
             ),
-        ),
-    ).properties[KEY_DESIGN] as Map<String, T>
+        ).properties[KEY_DESIGN] as Map<String, T>
 
     private fun Map<String, String>.assertTextStyleProperties() {
         assertEquals("Color(0.0, 0.0, 1.0, 1.0, sRGB IEC61966-2.1)", get("background"))
@@ -273,26 +278,27 @@ internal class LogEventUtilsTest {
     }
 
     private companion object {
-        private val CUSTOMISED_TEXT_STYLE = TextStyle(
-            color = Color.Red,
-            fontSize = 12.sp,
-            fontStyle = FontStyle.Italic,
-            fontWeight = FontWeight.Bold,
-            background = Color.Blue,
-            letterSpacing = 1.sp,
-            lineHeight = 14.sp,
-            fontSynthesis = FontSynthesis.All,
-            fontFamily = FontFamily.Monospace,
-            fontFeatureSettings = "fontFeatureSettings",
-            baselineShift = BaselineShift.Subscript,
-            textGeometricTransform = TextGeometricTransform(scaleX = 1.0F),
-            localeList = LocaleList("en"),
-            textDecoration = TextDecoration.Underline,
-            shadow = Shadow(Color.Black, offset = Offset(1f, 4f)),
-            textAlign = TextAlign.Justify,
-            textDirection = TextDirection.Ltr,
-            textIndent = TextIndent(1.sp),
-        )
+        private val CUSTOMISED_TEXT_STYLE =
+            TextStyle(
+                color = Color.Red,
+                fontSize = 12.sp,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.Bold,
+                background = Color.Blue,
+                letterSpacing = 1.sp,
+                lineHeight = 14.sp,
+                fontSynthesis = FontSynthesis.All,
+                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "fontFeatureSettings",
+                baselineShift = BaselineShift.Subscript,
+                textGeometricTransform = TextGeometricTransform(scaleX = 1.0F),
+                localeList = LocaleList("en"),
+                textDecoration = TextDecoration.Underline,
+                shadow = Shadow(Color.Black, offset = Offset(1f, 4f)),
+                textAlign = TextAlign.Justify,
+                textDirection = TextDirection.Ltr,
+                textIndent = TextIndent(1.sp),
+            )
         private val EVENT_INITIALIZE = LogEvent.Initialized(CardManagementDesignSystem(TextStyle()))
         private val EVENT_CARD_LIST = LogEvent.CardList(listOf("111", "222", "333"))
         private val EVENT_GET_PIN = LogEvent.GetPin("1234", ACTIVE)
@@ -301,12 +307,13 @@ internal class LogEventUtilsTest {
         private val EVENT_GET_PAN_CVV = LogEvent.GetPanCVV("1234", REVOKED)
         private val EVENT_STATE_MANAGEMENT =
             LogEvent.StateManagement("1234", ACTIVE, SUSPENDED, "REASON")
-        private val EVENT_PUSH_PROVISIONING = LogEvent.PushProvisioning("1234", "5678")
+        private val EVENT_PUSH_PROVISIONING = LogEvent.PushProvisioning("1234")
         private val EVENT_FAILURE =
             LogEvent.Failure("SOURCE", AuthenticationFailure)
 
-        private fun startedAt(durationMills: Int) = Calendar.getInstance().apply {
-            add(Calendar.MILLISECOND, durationMills)
-        }
+        private fun startedAt(durationMills: Int) =
+            Calendar.getInstance().apply {
+                add(Calendar.MILLISECOND, durationMills)
+            }
     }
 }
