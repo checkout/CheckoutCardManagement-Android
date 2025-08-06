@@ -5,24 +5,26 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 internal class CardManagementDesignSystemTest {
+    @Test
+    fun `assert getPanViewConfig with single TextStyle constructor`() =
+        assertEquals(
+            TEXT_STYLE,
+            CardManagementDesignSystem(TEXT_STYLE).panViewConfig.textStyle,
+        )
 
     @Test
-    fun `assert getPanViewConfig with single TextStyle constructor`() = assertEquals(
-        TEXT_STYLE,
-        CardManagementDesignSystem(TEXT_STYLE).panViewConfig.textStyle,
-    )
+    fun `assert getPinViewConfig with single TextStyle constructor`() =
+        assertEquals(
+            TEXT_STYLE,
+            CardManagementDesignSystem(TEXT_STYLE).pinViewConfig.textStyle,
+        )
 
     @Test
-    fun `assert getPinViewConfig with single TextStyle constructor`() = assertEquals(
-        TEXT_STYLE,
-        CardManagementDesignSystem(TEXT_STYLE).pinViewConfig.textStyle,
-    )
-
-    @Test
-    fun `assert getSecurityCodeViewConfig with single TextStyle constructor`() = assertEquals(
-        TEXT_STYLE,
-        CardManagementDesignSystem(TEXT_STYLE).securityCodeViewConfig.textStyle,
-    )
+    fun `assert getSecurityCodeViewConfig with single TextStyle constructor`() =
+        assertEquals(
+            TEXT_STYLE,
+            CardManagementDesignSystem(TEXT_STYLE).securityCodeViewConfig.textStyle,
+        )
 
     @Test
     fun `assert configs with separated TextStyle constructor`() {

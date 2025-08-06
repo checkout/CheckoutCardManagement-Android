@@ -17,24 +17,21 @@ public data class Card(
      */
     internal val manager: com.checkout.cardmanagement.CheckoutCardManager,
 ) {
-    /** Minimal partial identifier for logging purposes */
-    internal val partIdentifier: String by lazy { id.takeLast(PARTIAL_ID_DIGITS) }
-
     /** Possible [CardState] to change */
     public val possibleStateChanges: List<CardState> by lazy { state.getPossibleStateChanges() }
 
     internal companion object {
-        internal const val PARTIAL_ID_DIGITS = 4
         internal fun fromNetworkCard(
             networkCard: NetworkCard,
             manager: com.checkout.cardmanagement.CheckoutCardManager,
         ) = Card(
             state = networkCard.state.fromNetworkCardState(),
             panLast4Digits = networkCard.panLast4Digits,
-            expiryDate = CardExpiryDate(
-                month = networkCard.expiryMonth,
-                year = networkCard.expiryYear,
-            ),
+            expiryDate =
+                CardExpiryDate(
+                    month = networkCard.expiryMonth,
+                    year = networkCard.expiryYear,
+                ),
             cardholderName = networkCard.displayName ?: "",
             id = networkCard.id,
             manager = manager,

@@ -6,6 +6,7 @@ import com.checkout.cardmanagement.logging.CheckoutEventLogger
 import com.checkout.cardmanagement.logging.LogEvent
 import com.checkout.cardmanagement.logging.LogEventSource
 import com.checkout.cardmanagement.logging.LogEventSource.GET_CARDS
+import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_CARDHOLDER_ID
 import com.checkout.cardmanagement.model.Card
 import com.checkout.cardmanagement.model.CardManagementDesignSystem
 import com.checkout.cardmanagement.model.CardManagementError
@@ -30,7 +31,6 @@ public class CheckoutCardManager internal constructor(
     checkoutCardService: CheckoutCardService,
     internal val logger: CheckoutEventLogger,
 ) {
-
     init {
         logger.initialise(
             context = context,
@@ -103,21 +103,21 @@ public class CheckoutCardManager internal constructor(
                     cardholderId,
                     configuration.toNetworkConfig(),
                 ) { result ->
-                    result.onSuccess {
-                        logger.log(
-                            startedAt = startTime,
-                            event = LogEvent.ConfigurePushProvisioning(
-                                cardholderId.takeLast(Card.PARTIAL_ID_DIGITS),
-                            ),
-                        )
-                        completionHandler(result)
-                    }.onFailure {
-                        logger.log(
-                            LogEvent.Failure(LogEventSource.CONFIGURE_PUSH_PROVISIONING, it),
-                            startTime,
-                        )
-                        completionHandler(Result.failure(it.toCardManagementError()))
-                    }
+                    result
+                        .onSuccess {
+                            logger.log(
+                                startedAt = startTime,
+                                event = LogEvent.ConfigurePushProvisioning(cardholderId),
+                            )
+                            completionHandler(result)
+                        }.onFailure {
+                            logger.log(
+                                LogEvent.Failure(LogEventSource.CONFIGURE_PUSH_PROVISIONING, it),
+                                startTime,
+                                mapOf(KEY_CARDHOLDER_ID to cardholderId),
+                            )
+                            completionHandler(Result.failure(it.toCardManagementError()))
+                        }
                 }
             }
         }
@@ -135,24 +135,26 @@ public class CheckoutCardManager internal constructor(
         runBlocking {
             launch {
                 val startTime = Calendar.getInstance()
-                service.getCards(sessionToken ?: "")
+                service
+                    .getCards(sessionToken ?: "")
                     .catch {
                         completionHandler(Result.failure(it.toCardManagementError()))
-                    }
-                    .collect { result ->
-                        result.onSuccess { cardList ->
-                            val cards = cardList.cards.map { networkCard ->
-                                Card.fromNetworkCard(networkCard, this@CheckoutCardManager)
+                    }.collect { result ->
+                        result
+                            .onSuccess { cardList ->
+                                val cards =
+                                    cardList.cards.map { networkCard ->
+                                        Card.fromNetworkCard(networkCard, this@CheckoutCardManager)
+                                    }
+                                logger.log(
+                                    LogEvent.CardList(cards.map { it.id }),
+                                    startTime,
+                                )
+                                completionHandler(Result.success(cards))
+                            }.onFailure {
+                                logger.log(LogEvent.Failure(source = GET_CARDS, it), startTime)
+                                completionHandler(Result.failure(it.toCardManagementError()))
                             }
-                            logger.log(
-                                LogEvent.CardList(cards.map { it.partIdentifier }),
-                                startTime,
-                            )
-                            completionHandler(Result.success(cards))
-                        }.onFailure {
-                            logger.log(LogEvent.Failure(source = GET_CARDS, it), startTime)
-                            completionHandler(Result.failure(it.toCardManagementError()))
-                        }
                     }
             }
         }
