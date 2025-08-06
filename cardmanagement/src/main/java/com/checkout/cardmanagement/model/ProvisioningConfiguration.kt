@@ -40,11 +40,12 @@ public data class ProvisioningConfiguration(
         return result
     }
 
-    internal fun toNetworkConfig() = com.checkout.cardnetwork.data.core.ProvisioningConfiguration(
-        issuerID = this.issuerID,
-        serviceRSAExponent = this.serviceRSAExponent,
-        serviceRSAModulus = this.serviceRSAModulus,
-        serviceURL = this.serviceURL,
-        digitalCardURL = this.digitalCardURL,
-    )
+    internal fun toNetworkConfig() =
+        com.checkout.cardnetwork.data.core.ProvisioningConfiguration(
+            issuerID = this.issuerID,
+            serviceRSAExponent = this.serviceRSAExponent,
+            serviceRSAModulus = this.serviceRSAModulus,
+            serviceURL = this.serviceURL,
+            digitalCardURL = this.digitalCardURL,
+        )
 }

@@ -17,13 +17,12 @@ public enum class DigitizationState {
     ;
 
     internal companion object {
-        internal fun from(receivedState: CardDigitizationState): DigitizationState {
-            return when (receivedState) {
+        internal fun from(receivedState: CardDigitizationState): DigitizationState =
+            when (receivedState) {
                 CardDigitizationState.DIGITIZED -> DIGITIZED
                 CardDigitizationState.NOT_DIGITIZED -> NOT_DIGITIZED
                 CardDigitizationState.PENDING_IDV -> PENDING_IDV
                 CardDigitizationState.DIGITIZATION_IN_PROGRESS -> DIGITIZATION_IN_PROGRESS
             }
-        }
     }
 }

@@ -5,6 +5,7 @@ import android.content.Intent
 import com.checkout.cardmanagement.logging.CheckoutEventLogger
 import com.checkout.cardmanagement.logging.LogEvent
 import com.checkout.cardmanagement.logging.LogEventSource.ACTIVATE_CARD
+import com.checkout.cardmanagement.logging.LogEventSource.GET_CARD_DIGITIZATION_STATE
 import com.checkout.cardmanagement.logging.LogEventSource.PUSH_PROVISIONING
 import com.checkout.cardmanagement.logging.LogEventSource.REVOKE_CARD
 import com.checkout.cardmanagement.logging.LogEventSource.SUSPEND_CARD
@@ -20,6 +21,7 @@ import com.checkout.cardnetwork.common.model.CardNetworkError
 import com.checkout.cardnetwork.common.model.CardNetworkError.PushProvisioningFailureType
 import com.checkout.cardnetwork.common.model.CardNetworkError.PushProvisioningFailureType.OPERATION_FAILURE
 import com.checkout.cardnetwork.common.model.CardNetworkError.ServerIssue
+import com.checkout.cardnetwork.data.core.CardDigitizationState
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -39,6 +41,7 @@ internal class CardManagementTest {
     private val manager: com.checkout.cardmanagement.CheckoutCardManager = mock()
     private val logger: CheckoutEventLogger = mock()
     private val resultCaptor = argumentCaptor<(Result<Unit>) -> Unit>()
+    private val getDigitizationStateResultCaptor = argumentCaptor<(Result<CardDigitizationState>) -> Unit>()
     private lateinit var card: Card
 
     @Before
@@ -50,55 +53,113 @@ internal class CardManagementTest {
     }
 
     @Test
-    fun `Provision success result handler`() = runBlocking {
-        val completionHandler: (Result<Unit>) -> Unit = {
-            assertTrue(it.isSuccess)
-        }
-        getProvisionHandler(completionHandler)
-        resultCaptor.firstValue.invoke((Result.success(Unit)))
-    }
-
-    @Test
-    fun `Provision success result logging`() = runBlocking {
-        val completionHandler: (Result<Unit>) -> Unit = {
-            val eventCaptor = argumentCaptor<LogEvent>()
-            verify(logger).log(eventCaptor.capture(), any())
-            assertTrue(eventCaptor.firstValue is LogEvent.PushProvisioning)
-            (eventCaptor.firstValue as LogEvent.PushProvisioning).let { event ->
-                assertEquals(card.partIdentifier, event.last4CardID)
-                assertEquals(CARDHOLDER_ID.takeLast(4), event.last4CardholderID)
+    fun `GetDigitizationState success result handler`() =
+        runBlocking {
+            val completionHandler: (Result<DigitizationState>) -> Unit = {
+                assertTrue(it.isSuccess)
+                assertEquals(DigitizationState.DIGITIZED, it.getOrNull())
             }
+            getDigitizationStateHandler(completionHandler)
+            getDigitizationStateResultCaptor.firstValue.invoke((Result.success(CardDigitizationState.DIGITIZED)))
         }
-        getProvisionHandler(completionHandler)
-        resultCaptor.firstValue.invoke((Result.success(Unit)))
-    }
 
     @Test
-    fun `Provision failure result handler`() = runBlocking {
-        val completionHandler: (Result<Unit>) -> Unit = {
-            assertTrue(it.isFailure)
-            assertEquals(CardManagementError.PushProvisioningFailure(CANCELLED), it.exceptionOrNull()!!)
-        }
-        getProvisionHandler(completionHandler)
-        resultCaptor.firstValue.invoke(
-            (Result.failure(CardNetworkError.PushProvisioningFailure(PushProvisioningFailureType.CANCELLED))),
-        )
-    }
-
-    @Test
-    fun `Provision failure result logging`() = runBlocking {
-        val completionHandler: (Result<Unit>) -> Unit = {
-            val eventCaptor = argumentCaptor<LogEvent>()
-            verify(logger).log(eventCaptor.capture(), any())
-            assertTrue(eventCaptor.firstValue is LogEvent.Failure)
-            (eventCaptor.firstValue as LogEvent.Failure).let { event ->
-                assertEquals(CardNetworkError.PushProvisioningFailure(OPERATION_FAILURE), event.error)
-                assertEquals(PUSH_PROVISIONING, event.source)
+    fun `GetDigitizationState success result logging`() =
+        runBlocking {
+            val completionHandler: (Result<DigitizationState>) -> Unit = {
+                val eventCaptor = argumentCaptor<LogEvent>()
+                verify(logger).log(eventCaptor.capture(), any(), any())
+                assertTrue(eventCaptor.firstValue is LogEvent.GetCardDigitizationState)
+                (eventCaptor.firstValue as LogEvent.GetCardDigitizationState).let { event ->
+                    assertEquals(card.id, event.cardId)
+                }
             }
+            getDigitizationStateHandler(completionHandler)
+            getDigitizationStateResultCaptor.firstValue.invoke((Result.success(CardDigitizationState.DIGITIZED)))
         }
-        getProvisionHandler(completionHandler)
-        resultCaptor.firstValue.invoke((Result.failure(CardNetworkError.PushProvisioningFailure(OPERATION_FAILURE))))
-    }
+
+    @Test
+    fun `GetDigitizationState failure result handler`() =
+        runBlocking {
+            val completionHandler: (Result<DigitizationState>) -> Unit = {
+                assertTrue(it.isFailure)
+                assertEquals(CardManagementError.FetchDigitizationStateFailure(CardManagementError.DigitizationStateFailureType.CONFIGURATION_FAILURE), it.exceptionOrNull()!!)
+            }
+            getDigitizationStateHandler(completionHandler)
+            getDigitizationStateResultCaptor.firstValue.invoke(
+                (Result.failure(CardNetworkError.FetchDigitizationStateFailure(CardNetworkError.DigitizationStateFailureType.CONFIGURATION_FAILURE))),
+            )
+        }
+
+    @Test
+    fun `GetDigitizationState failure result logging`() =
+        runBlocking {
+            val completionHandler: (Result<DigitizationState>) -> Unit = {
+                val eventCaptor = argumentCaptor<LogEvent>()
+                verify(logger).log(eventCaptor.capture(), any(), any())
+                assertTrue(eventCaptor.firstValue is LogEvent.Failure)
+                (eventCaptor.firstValue as LogEvent.Failure).let { event ->
+                    assertEquals(CardNetworkError.FetchDigitizationStateFailure(CardNetworkError.DigitizationStateFailureType.OPERATION_FAILURE), event.error)
+                    assertEquals(GET_CARD_DIGITIZATION_STATE, event.source)
+                }
+            }
+            getDigitizationStateHandler(completionHandler)
+            getDigitizationStateResultCaptor.firstValue.invoke((Result.failure(CardNetworkError.FetchDigitizationStateFailure(CardNetworkError.DigitizationStateFailureType.OPERATION_FAILURE))))
+        }
+
+    @Test
+    fun `Provision success result handler`() =
+        runBlocking {
+            val completionHandler: (Result<Unit>) -> Unit = {
+                assertTrue(it.isSuccess)
+            }
+            getProvisionHandler(completionHandler)
+            resultCaptor.firstValue.invoke((Result.success(Unit)))
+        }
+
+    @Test
+    fun `Provision success result logging`() =
+        runBlocking {
+            val completionHandler: (Result<Unit>) -> Unit = {
+                val eventCaptor = argumentCaptor<LogEvent>()
+                verify(logger).log(eventCaptor.capture(), any(), any())
+                assertTrue(eventCaptor.firstValue is LogEvent.PushProvisioning)
+                (eventCaptor.firstValue as LogEvent.PushProvisioning).let { event ->
+                    assertEquals(card.id, event.cardId)
+                }
+            }
+            getProvisionHandler(completionHandler)
+            resultCaptor.firstValue.invoke((Result.success(Unit)))
+        }
+
+    @Test
+    fun `Provision failure result handler`() =
+        runBlocking {
+            val completionHandler: (Result<Unit>) -> Unit = {
+                assertTrue(it.isFailure)
+                assertEquals(CardManagementError.PushProvisioningFailure(CANCELLED), it.exceptionOrNull()!!)
+            }
+            getProvisionHandler(completionHandler)
+            resultCaptor.firstValue.invoke(
+                (Result.failure(CardNetworkError.PushProvisioningFailure(PushProvisioningFailureType.CANCELLED))),
+            )
+        }
+
+    @Test
+    fun `Provision failure result logging`() =
+        runBlocking {
+            val completionHandler: (Result<Unit>) -> Unit = {
+                val eventCaptor = argumentCaptor<LogEvent>()
+                verify(logger).log(eventCaptor.capture(), any(), any())
+                assertTrue(eventCaptor.firstValue is LogEvent.Failure)
+                (eventCaptor.firstValue as LogEvent.Failure).let { event ->
+                    assertEquals(CardNetworkError.PushProvisioningFailure(OPERATION_FAILURE), event.error)
+                    assertEquals(PUSH_PROVISIONING, event.source)
+                }
+            }
+            getProvisionHandler(completionHandler)
+            resultCaptor.firstValue.invoke((Result.failure(CardNetworkError.PushProvisioningFailure(OPERATION_FAILURE))))
+        }
 
     @Test
     fun `card#handleCardResult should call CardService#handleCardResult`() {
@@ -310,21 +371,27 @@ internal class CardManagementTest {
         }
     }
 
-    private fun assertSuccessfulLog(expectedReason: String?, expectedRequestedState: CardState) {
+    private fun assertSuccessfulLog(
+        expectedReason: String?,
+        expectedRequestedState: CardState,
+    ) {
         val eventCaptor = argumentCaptor<LogEvent>()
-        verify(logger).log(eventCaptor.capture(), any())
+        verify(logger).log(eventCaptor.capture(), any(), any())
         assertTrue(eventCaptor.firstValue is LogEvent.StateManagement)
         (eventCaptor.firstValue as LogEvent.StateManagement).let { event ->
-            assertEquals(card.partIdentifier, event.idLast4)
+            assertEquals(card.id, event.cardId)
             assertEquals(card.state, event.originalState)
             assertEquals(expectedRequestedState, event.requestedState)
             assertEquals(expectedReason, event.reason)
         }
     }
 
-    private fun assertFailureLog(expectedSource: String, expectedError: CardNetworkError) {
+    private fun assertFailureLog(
+        expectedSource: String,
+        expectedError: CardNetworkError,
+    ) {
         val eventCaptor = argumentCaptor<LogEvent>()
-        verify(logger).log(eventCaptor.capture(), any())
+        verify(logger).log(eventCaptor.capture(), any(), any())
         assertTrue(eventCaptor.firstValue is LogEvent.Failure)
         (eventCaptor.firstValue as LogEvent.Failure).let { event ->
             assertEquals(expectedSource, event.source)
@@ -332,13 +399,27 @@ internal class CardManagementTest {
         }
     }
 
+    private fun getDigitizationStateHandler(
+        completionHandler: (Result<DigitizationState>) -> Unit,
+    ): (Result<CardDigitizationState>) -> Unit {
+        card.getDigitizationState(
+            token = TOKEN,
+            completionHandler = completionHandler,
+        )
+
+        verify(service).getCardDigitizationState(
+            cardId = eq(card.id),
+            token = eq(TOKEN),
+            completionHandler = getDigitizationStateResultCaptor.capture(),
+        )
+        return getDigitizationStateResultCaptor.firstValue
+    }
+
     private fun getProvisionHandler(
         completionHandler: (Result<Unit>) -> Unit,
     ): (Result<Unit>) -> Unit {
         card.provision(
             activity = activity,
-            cardholderId = CARDHOLDER_ID,
-            configuration = CONFIG,
             token = TOKEN,
             completionHandler = completionHandler,
         )
@@ -346,8 +427,6 @@ internal class CardManagementTest {
         verify(service).addCardToGoogleWallet(
             activity = eq(activity),
             cardId = eq(card.id),
-            cardholderId = eq(CARDHOLDER_ID),
-            configuration = any(),
             token = eq(TOKEN),
             completionHandler = resultCaptor.capture(),
         )
@@ -355,15 +434,7 @@ internal class CardManagementTest {
     }
 
     private companion object {
-        private const val CARDHOLDER_ID = "CARDHOLDER_ID"
         private const val TOKEN = "TOKEN"
-        private val CONFIG = ProvisioningConfiguration(
-            issuerID = "ISSUER_ID",
-            serviceRSAExponent = byteArrayOf(),
-            serviceRSAModulus = byteArrayOf(),
-            serviceURL = "SERVICE_URL",
-            digitalCardURL = "DIGITAL_CARD_URL",
-        )
 
         private fun createCard(
             state: CardState = ACTIVE,

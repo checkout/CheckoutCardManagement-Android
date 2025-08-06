@@ -1,5 +1,6 @@
 package com.checkout.cardmanagement
 
+import android.app.Activity
 import android.content.Context
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.text.TextStyle
@@ -7,6 +8,7 @@ import com.checkout.cardmanagement.Fixtures.NETWORK_CARD_LIST
 import com.checkout.cardmanagement.Fixtures.createCard
 import com.checkout.cardmanagement.logging.CheckoutEventLogger
 import com.checkout.cardmanagement.logging.LogEvent
+import com.checkout.cardmanagement.logging.LogEventSource.CONFIGURE_PUSH_PROVISIONING
 import com.checkout.cardmanagement.logging.LogEventSource.GET_CARDS
 import com.checkout.cardmanagement.logging.LogEventSource.GET_CVV
 import com.checkout.cardmanagement.logging.LogEventSource.GET_PAN
@@ -17,6 +19,7 @@ import com.checkout.cardmanagement.model.CardManagementDesignSystem
 import com.checkout.cardmanagement.model.CardManagementError
 import com.checkout.cardmanagement.model.CardManagementError.PushProvisioningFailureType.OPERATION_FAILURE
 import com.checkout.cardmanagement.model.Environment.SANDBOX
+import com.checkout.cardmanagement.model.ProvisioningConfiguration
 import com.checkout.cardmanagement.model.getPANAndSecurityCode
 import com.checkout.cardmanagement.model.getPan
 import com.checkout.cardmanagement.model.getPin
@@ -30,6 +33,7 @@ import com.checkout.cardnetwork.common.model.Environment
 import junit.framework.TestCase.assertNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,23 +50,26 @@ import org.mockito.kotlin.verify
 import java.util.Calendar
 
 internal class CheckoutCardManagerTest {
+    private val activity: Activity = mock()
     private val cardService: CardService = mock()
     private val checkoutCardService: CheckoutCardService = mock()
     private val logger: CheckoutEventLogger = mock()
     private val context: Context = mock()
+    private val resultCaptor = argumentCaptor<(Result<Unit>) -> Unit>()
     private lateinit var manager: CheckoutCardManager
     private lateinit var card: Card
 
     @Before
     fun setup() {
         setupCheckoutCardService()
-        manager = CheckoutCardManager(
-            context,
-            SANDBOX,
-            DESIGN_SYSTEM,
-            checkoutCardService,
-            logger,
-        )
+        manager =
+            CheckoutCardManager(
+                context,
+                SANDBOX,
+                DESIGN_SYSTEM,
+                checkoutCardService,
+                logger,
+            )
         card = createCard(manager)
     }
 
@@ -77,7 +84,7 @@ internal class CheckoutCardManagerTest {
 
     @Test
     fun `logger Initialized on init`() {
-        verify(logger).log(eq(LogEvent.Initialized(DESIGN_SYSTEM)), eq(null))
+        verify(logger).log(eq(LogEvent.Initialized(DESIGN_SYSTEM)), eq(null), eq(emptyMap()))
     }
 
     @Test
@@ -123,6 +130,60 @@ internal class CheckoutCardManagerTest {
         manager.logoutSession()
         assertNull(manager.sessionToken)
     }
+
+    @Test
+    fun `ConfigurePushProvisioning success result handler`() =
+        runBlocking {
+            val completionHandler: (Result<Unit>) -> Unit = {
+                assertTrue(it.isSuccess)
+            }
+            getConfigurePushProvisioningHandler(completionHandler)
+            resultCaptor.firstValue.invoke((Result.success(Unit)))
+        }
+
+    @Test
+    fun `ConfigurePushProvisioning success result logging`() =
+        runBlocking {
+            val completionHandler: (Result<Unit>) -> Unit = {
+                val eventCaptor = argumentCaptor<LogEvent>()
+                verify(logger).log(eventCaptor.capture(), org.mockito.kotlin.any(), eq(emptyMap<String, String>()))
+                assertTrue(eventCaptor.firstValue is LogEvent.ConfigurePushProvisioning)
+                (eventCaptor.firstValue as LogEvent.ConfigurePushProvisioning).let { event ->
+                    assertEquals(CARDHOLDER_ID, event.cardholderId)
+                }
+            }
+            getConfigurePushProvisioningHandler(completionHandler)
+            resultCaptor.firstValue.invoke((Result.success(Unit)))
+        }
+
+    @Test
+    fun `ConfigurePushProvisioning failure result handler`() =
+        runBlocking {
+            val completionHandler: (Result<Unit>) -> Unit = {
+                assertTrue(it.isFailure)
+                assertEquals(CardManagementError.ConfigurationIssue(CONFIGURATION_ERROR_HINT), it.exceptionOrNull()!!)
+            }
+            getConfigurePushProvisioningHandler(completionHandler)
+            resultCaptor.firstValue.invoke(
+                (Result.failure(CardNetworkError.Misconfigured(CONFIGURATION_ERROR_HINT))),
+            )
+        }
+
+    @Test
+    fun `ConfigurePushProvisioning failure result logging`() =
+        runBlocking {
+            val completionHandler: (Result<Unit>) -> Unit = {
+                val eventCaptor = argumentCaptor<LogEvent>()
+                verify(logger).log(eventCaptor.capture(), org.mockito.kotlin.any(), org.mockito.kotlin.any())
+                assertTrue(eventCaptor.firstValue is LogEvent.Failure)
+                (eventCaptor.firstValue as LogEvent.Failure).let { event ->
+                    assertEquals(CardNetworkError.Misconfigured(CONFIGURATION_ERROR_HINT), event.error)
+                    assertEquals(CONFIGURE_PUSH_PROVISIONING, event.source)
+                }
+            }
+            getConfigurePushProvisioningHandler(completionHandler)
+            resultCaptor.firstValue.invoke((Result.failure(CardNetworkError.Misconfigured(CONFIGURATION_ERROR_HINT))))
+        }
 
     @Test
     fun `getCardList should get an Unauthenticated when the session token is null`() {
@@ -211,10 +272,10 @@ internal class CheckoutCardManagerTest {
         manager.getCards { result ->
             val cards = result.getOrNull()
             val eventCaptor = argumentCaptor<LogEvent>()
-            verify(logger).log(eventCaptor.capture(), any(Calendar::class.java))
+            verify(logger).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
             assertTrue(eventCaptor.firstValue is LogEvent.CardList)
-            (eventCaptor.firstValue as LogEvent.CardList).idSuffixes.forEachIndexed { index, idSuffix ->
-                assertEquals(cards!![index].partIdentifier, idSuffix)
+            (eventCaptor.firstValue as LogEvent.CardList).cardIds.forEachIndexed { index, cardId ->
+                assertEquals(cards!![index].id, cardId)
             }
         }
     }
@@ -267,11 +328,11 @@ internal class CheckoutCardManagerTest {
             displaySecureDataResult = flow { emit(Result.success(mock())) },
             onReceivedSecureDataView = {
                 val eventCaptor = argumentCaptor<LogEvent>()
-                verify(logger).log(eventCaptor.capture(), any(Calendar::class.java))
+                verify(logger).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
                 assertTrue(eventCaptor.firstValue is LogEvent.GetPin)
                 assertEquals(
-                    card.partIdentifier,
-                    (eventCaptor.firstValue as LogEvent.GetPin).idLast4,
+                    card.id,
+                    (eventCaptor.firstValue as LogEvent.GetPin).cardId,
                 )
                 assertEquals(
                     card.state,
@@ -333,11 +394,11 @@ internal class CheckoutCardManagerTest {
             displaySecureDataResult = flow { emit(Result.success(mock())) },
             onReceivedSecureDataView = {
                 val eventCaptor = argumentCaptor<LogEvent>()
-                verify(logger).log(eventCaptor.capture(), any(Calendar::class.java))
+                verify(logger).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
                 assertTrue(eventCaptor.firstValue is LogEvent.GetPan)
                 assertEquals(
-                    card.partIdentifier,
-                    (eventCaptor.firstValue as LogEvent.GetPan).idLast4,
+                    card.id,
+                    (eventCaptor.firstValue as LogEvent.GetPan).cardId,
                 )
                 assertEquals(
                     card.state,
@@ -399,11 +460,11 @@ internal class CheckoutCardManagerTest {
             displaySecureDataResult = flow { emit(Result.success(mock())) },
             onReceivedSecureDataView = {
                 val eventCaptor = argumentCaptor<LogEvent>()
-                verify(logger).log(eventCaptor.capture(), any(Calendar::class.java))
+                verify(logger).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
                 assertTrue(eventCaptor.firstValue is LogEvent.GetCVV)
                 assertEquals(
-                    card.partIdentifier,
-                    (eventCaptor.firstValue as LogEvent.GetCVV).idLast4,
+                    card.id,
+                    (eventCaptor.firstValue as LogEvent.GetCVV).cardId,
                 )
                 assertEquals(
                     card.state,
@@ -448,9 +509,10 @@ internal class CheckoutCardManagerTest {
         val expectedPanView: AbstractComposeView = mock()
         val expectedSecurityCodeView: AbstractComposeView = mock()
         performDisplaySecureDataPairResult(
-            displaySecureDataResult = flow {
-                emit(Result.success(expectedPanView to expectedSecurityCodeView))
-            },
+            displaySecureDataResult =
+                flow {
+                    emit(Result.success(expectedPanView to expectedSecurityCodeView))
+                },
             onReceivedSecureDataPairView = {
                 assertTrue(it.isSuccess)
                 assertEquals(expectedPanView, it.getOrNull()?.first)
@@ -462,16 +524,17 @@ internal class CheckoutCardManagerTest {
     @Test
     fun `displayPANAndSecureCode should log the GetPanCVV event if the request is successful`() {
         performDisplaySecureDataPairResult(
-            displaySecureDataResult = flow {
-                emit(Result.success(mock<AbstractComposeView>() to mock()))
-            },
+            displaySecureDataResult =
+                flow {
+                    emit(Result.success(mock<AbstractComposeView>() to mock()))
+                },
             onReceivedSecureDataPairView = {
                 val eventCaptor = argumentCaptor<LogEvent>()
-                verify(logger).log(eventCaptor.capture(), any(Calendar::class.java))
+                verify(logger).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
                 assertTrue(eventCaptor.firstValue is LogEvent.GetPanCVV)
                 assertEquals(
-                    card.partIdentifier,
-                    (eventCaptor.firstValue as LogEvent.GetPanCVV).idLast4,
+                    card.id,
+                    (eventCaptor.firstValue as LogEvent.GetPanCVV).cardId,
                 )
                 assertEquals(
                     card.state,
@@ -481,9 +544,12 @@ internal class CheckoutCardManagerTest {
         )
     }
 
-    private fun assertFailureLogEvent(expectedSource: String, expectedError: Throwable) {
+    private fun assertFailureLogEvent(
+        expectedSource: String,
+        expectedError: Throwable,
+    ) {
         val eventCaptor = argumentCaptor<LogEvent>()
-        verify(logger, atLeastOnce()).log(eventCaptor.capture(), any(Calendar::class.java))
+        verify(logger, atLeastOnce()).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
         assertTrue(eventCaptor.lastValue is LogEvent.Failure)
         assertEquals(expectedError, (eventCaptor.lastValue as LogEvent.Failure).error)
         assertEquals(expectedSource, (eventCaptor.lastValue as LogEvent.Failure).source)
@@ -496,21 +562,26 @@ internal class CheckoutCardManagerTest {
     ) {
         `when`(
             when (secureDataType) {
-                SecureDataType.PIN -> cardService.displayPin(
-                    card.id,
-                    SINGLE_USE_TOKEN,
-                    DESIGN_SYSTEM.pinViewConfig,
-                )
-                SecureDataType.PAN -> cardService.displayPan(
-                    card.id,
-                    SINGLE_USE_TOKEN,
-                    DESIGN_SYSTEM.panViewConfig,
-                )
-                SecureDataType.CVV -> cardService.displaySecurityCode(
-                    card.id,
-                    SINGLE_USE_TOKEN,
-                    DESIGN_SYSTEM.securityCodeViewConfig,
-                )
+                SecureDataType.PIN ->
+                    cardService.displayPin(
+                        card.id,
+                        SINGLE_USE_TOKEN,
+                        DESIGN_SYSTEM.pinViewConfig,
+                    )
+
+                SecureDataType.PAN ->
+                    cardService.displayPan(
+                        card.id,
+                        SINGLE_USE_TOKEN,
+                        DESIGN_SYSTEM.panViewConfig,
+                    )
+
+                SecureDataType.CVV ->
+                    cardService.displaySecurityCode(
+                        card.id,
+                        SINGLE_USE_TOKEN,
+                        DESIGN_SYSTEM.securityCodeViewConfig,
+                    )
             },
         ).thenReturn(displaySecureDataResult)
 
@@ -556,23 +627,57 @@ internal class CheckoutCardManagerTest {
         `when`(checkoutCardService.initialize(context, Environment.SANDBOX)).thenReturn(cardService)
     }
 
+    private fun getConfigurePushProvisioningHandler(
+        completionHandler: (Result<Unit>) -> Unit,
+    ): (Result<Unit>) -> Unit {
+        manager.configurePushProvisioning(
+            activity = activity,
+            cardholderId = CARDHOLDER_ID,
+            configuration = CONFIG,
+            completionHandler = completionHandler,
+        )
+
+        verify(cardService).configurePushProvisioning(
+            activity = eq(activity),
+            cardholderId = eq(CARDHOLDER_ID),
+            configuration = org.mockito.kotlin.any(),
+            completionHandler = resultCaptor.capture(),
+        )
+        return resultCaptor.firstValue
+    }
+
     companion object {
         private enum class SecureDataType { PIN, PAN, CVV }
+
         private val DESIGN_SYSTEM = CardManagementDesignSystem(TextStyle())
         private const val SINGLE_USE_TOKEN = "SINGLE_USE_TOKEN"
         private const val VALID_TOKEN = "VALID_TOKEN"
         private const val VALID_TOKEN_2 = "VALID_TOKEN_2"
         private const val INVALID_TOKEN = "INVALID_TOKEN"
-        private fun getAllCardManageErrors(): List<CardManagementError> {
-            val errorList = listOf(
-                CardManagementError.AuthenticationFailure,
-                CardManagementError.ConfigurationIssue("HINT"),
-                CardManagementError.ConnectionIssue,
-                CardManagementError.Unauthenticated,
-                CardManagementError.UnableToPerformSecureOperation,
-                CardManagementError.InvalidStateRequested,
-                CardManagementError.PushProvisioningFailure(OPERATION_FAILURE),
+        private const val CARDHOLDER_ID = "CARDHOLDER_ID"
+        private const val CONFIGURATION_ERROR_HINT = "HINT"
+        private val CONFIG =
+            ProvisioningConfiguration(
+                issuerID = "ISSUER_ID",
+                serviceRSAExponent = byteArrayOf(),
+                serviceRSAModulus = byteArrayOf(),
+                serviceURL = "SERVICE_URL",
+                digitalCardURL = "DIGITAL_CARD_URL",
             )
+
+        private fun getAllCardManageErrors(): List<CardManagementError> {
+            val errorList =
+                listOf(
+                    CardManagementError.AuthenticationFailure,
+                    CardManagementError.ConfigurationIssue("HINT"),
+                    CardManagementError.ConnectionIssue,
+                    CardManagementError.Unauthenticated,
+                    CardManagementError.UnableToPerformSecureOperation,
+                    CardManagementError.InvalidStateRequested,
+                    CardManagementError.PanNotViewedFailure,
+                    CardManagementError.PushProvisioningFailure(OPERATION_FAILURE),
+                    CardManagementError.FetchDigitizationStateFailure(CardManagementError.DigitizationStateFailureType.OPERATION_FAILURE),
+                )
             if (errorList.size != CardManagementError::class.sealedSubclasses.size) {
                 throw Exception("One or more CardManagementError is missing in the errorList.")
             }
