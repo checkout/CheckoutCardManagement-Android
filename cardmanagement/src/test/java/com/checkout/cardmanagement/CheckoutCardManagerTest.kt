@@ -668,6 +668,7 @@ internal class CheckoutCardManagerTest {
         private fun getAllCardManageErrors(): List<CardManagementError> {
             val errorList =
                 listOf(
+                    CardManagementError.UnsupportedAPIVersion(12),
                     CardManagementError.AuthenticationFailure,
                     CardManagementError.ConfigurationIssue("HINT"),
                     CardManagementError.ConnectionIssue,
