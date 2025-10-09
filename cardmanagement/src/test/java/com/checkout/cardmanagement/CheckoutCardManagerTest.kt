@@ -20,6 +20,7 @@ import com.checkout.cardmanagement.model.CardManagementError
 import com.checkout.cardmanagement.model.CardManagementError.PushProvisioningFailureType.OPERATION_FAILURE
 import com.checkout.cardmanagement.model.Environment.SANDBOX
 import com.checkout.cardmanagement.model.ProvisioningConfiguration
+import com.checkout.cardmanagement.model.copyPan
 import com.checkout.cardmanagement.model.getPANAndSecurityCode
 import com.checkout.cardmanagement.model.getPan
 import com.checkout.cardmanagement.model.getPin
@@ -33,6 +34,7 @@ import com.checkout.cardnetwork.common.model.Environment
 import junit.framework.TestCase.assertNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -519,6 +521,77 @@ internal class CheckoutCardManagerTest {
                 assertEquals(expectedSecurityCodeView, it.getOrNull()?.second)
             },
         )
+    }
+
+    @Test
+    fun `copyPan should call completionHandler with a success Result if no error is caught`() {
+        `when`(
+            cardService.copyPan(
+                card.id,
+                SINGLE_USE_TOKEN,
+            ),
+        ).thenReturn(flowOf(Result.success(Unit)))
+
+        card.copyPan(SINGLE_USE_TOKEN) { result ->
+            assertTrue(result.isSuccess)
+        }
+    }
+
+    @Test
+    fun `copyPan should call completionHandler with a failure Result if a failure result is returned`() {
+        getAllCardManageErrors().forEach { cardNetworkError ->
+            `when`(
+                cardService.copyPan(
+                    card.id,
+                    SINGLE_USE_TOKEN,
+                ),
+            ).thenReturn(flow { emit(Result.failure(cardNetworkError)) })
+
+            card.copyPan(SINGLE_USE_TOKEN) { result ->
+                assertTrue(result.isFailure)
+                assertEquals(cardNetworkError.toCardManagementError(), result.exceptionOrNull())
+            }
+        }
+    }
+
+    @Test
+    fun `copyPan should call completionHandler with a failure Result if an exception is thrown`() {
+        val error = Exception()
+        `when`(
+            cardService.copyPan(
+                card.id,
+                SINGLE_USE_TOKEN,
+            ),
+        ).thenReturn(flow { throw error })
+
+        card.copyPan(SINGLE_USE_TOKEN) { result ->
+            assertTrue(result.isFailure)
+            assertEquals(Exception().toCardManagementError(), result.exceptionOrNull())
+        }
+    }
+
+    @Test
+    fun `copyPan should log the CopyPan event if the request is successful`() {
+        `when`(
+            cardService.copyPan(
+                card.id,
+                SINGLE_USE_TOKEN,
+            ),
+        ).thenReturn(flowOf(Result.success(Unit)))
+
+        card.copyPan(SINGLE_USE_TOKEN) { result ->
+            val eventCaptor = argumentCaptor<LogEvent>()
+            verify(logger).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
+            assertTrue(eventCaptor.firstValue is LogEvent.CopyPan)
+            assertEquals(
+                card.id,
+                (eventCaptor.firstValue as LogEvent.CopyPan).cardId,
+            )
+            assertEquals(
+                card.state,
+                (eventCaptor.firstValue as LogEvent.CopyPan).cardState,
+            )
+        }
     }
 
     @Test
