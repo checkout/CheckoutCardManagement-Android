@@ -10,6 +10,11 @@ internal fun Environment.parse() =
 internal fun com.checkout.cardnetwork.data.dto.CardState.fromNetworkCardState(): CardState =
     CardState.values().find { state -> state.name == name } ?: CardState.INACTIVE
 
+internal fun CardState.toNetworkCardState(): com.checkout.cardnetwork.data.dto.CardState? =
+    com.checkout.cardnetwork.data.dto.CardState
+        .values()
+        .find { state -> state.name == name }
+
 // Possible Card State changes from the current state
 internal fun CardState.getPossibleStateChanges(): List<CardState> =
     when (this) {

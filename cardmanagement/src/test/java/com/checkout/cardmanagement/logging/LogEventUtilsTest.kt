@@ -300,7 +300,7 @@ internal class LogEventUtilsTest {
                 textIndent = TextIndent(1.sp),
             )
         private val EVENT_INITIALIZE = LogEvent.Initialized(CardManagementDesignSystem(TextStyle()))
-        private val EVENT_CARD_LIST = LogEvent.CardList(listOf("111", "222", "333"))
+        private val EVENT_CARD_LIST = LogEvent.CardList(listOf("111", "222", "333"), requestedStatuses = setOf())
         private val EVENT_GET_PIN = LogEvent.GetPin("1234", ACTIVE)
         private val EVENT_GET_PAN = LogEvent.GetPan("1234", INACTIVE)
         private val EVENT_GET_CVV = LogEvent.GetCVV("1234", SUSPENDED)

@@ -10,10 +10,14 @@ import com.checkout.cardmanagement.logging.LogEventUtils.Companion.KEY_CARDHOLDE
 import com.checkout.cardmanagement.model.Card
 import com.checkout.cardmanagement.model.CardManagementDesignSystem
 import com.checkout.cardmanagement.model.CardManagementError
+import com.checkout.cardmanagement.model.CardState
 import com.checkout.cardmanagement.model.Environment
 import com.checkout.cardmanagement.model.ProvisioningConfiguration
 import com.checkout.cardmanagement.model.parse
 import com.checkout.cardmanagement.model.toCardManagementError
+import com.checkout.cardmanagement.model.toNetworkCardState
+import com.checkout.cardmanagement.utils.CoroutineScopeOwner
+import com.checkout.cardmanagement.utils.DefaultCoroutineScopeHandler
 import com.checkout.cardnetwork.CardService
 import com.checkout.cardnetwork.CheckoutCardService
 import kotlinx.coroutines.flow.catch
@@ -30,6 +34,7 @@ public class CheckoutCardManager internal constructor(
     internal val designSystem: CardManagementDesignSystem,
     checkoutCardService: CheckoutCardService,
     internal val logger: CheckoutEventLogger,
+    internal val coroutineScope: CoroutineScopeOwner,
 ) {
     init {
         logger.initialise(
@@ -53,6 +58,7 @@ public class CheckoutCardManager internal constructor(
         designSystem,
         CheckoutCardService(),
         CheckoutEventLogger(),
+        coroutineScope = DefaultCoroutineScopeHandler(),
     )
 
     // Service enabling interactions with outside services
@@ -125,8 +131,32 @@ public class CheckoutCardManager internal constructor(
 
     /**
      * Request a list of cards
+     *
+     * @param statuses Optional list of [CardState] values to filter cards by their state.
+     * When provided, only cards matching the specified states will be returned.
+     * Pass an empty list (default) to retrieve all cards regardless of their state.
+     * Supported states: [CardState.ACTIVE], [CardState.INACTIVE], [CardState.SUSPENDED], [CardState.REVOKED]
+     * @param completionHandler Callback that receives a [Result] containing either:
+     * - Success: List of [Card] objects matching the filter criteria
+     * - Failure: [CardManagementError] describing what went wrong
+     *
+     * Example usage:
+     * ```
+     * // Get all cards
+     * manager.getCards { result ->
+     *     result.onSuccess { cards -> /* handle cards */ }
+     * }
+     *
+     * // Get only active and suspended cards
+     * manager.getCards(statuses = listOf(CardState.ACTIVE, CardState.SUSPENDED)) { result ->
+     *     result.onSuccess { cards -> /* handle filtered cards */ }
+     * }
+     * ```
      */
-    public fun getCards(completionHandler: CardListResultCompletion) {
+    public fun getCards(
+        statuses: Set<CardState> = emptySet(),
+        completionHandler: CardListResultCompletion,
+    ) {
         if (sessionToken == null) {
             completionHandler(Result.failure(CardManagementError.Unauthenticated))
             return
@@ -136,8 +166,10 @@ public class CheckoutCardManager internal constructor(
             launch {
                 val startTime = Calendar.getInstance()
                 service
-                    .getCards(sessionToken ?: "")
-                    .catch {
+                    .getCards(
+                        sessionToken = sessionToken ?: "",
+                        statuses = statuses.mapNotNull { it.toNetworkCardState() }.toSet(),
+                    ).catch {
                         completionHandler(Result.failure(it.toCardManagementError()))
                     }.collect { result ->
                         result
@@ -147,7 +179,11 @@ public class CheckoutCardManager internal constructor(
                                         Card.fromNetworkCard(networkCard, this@CheckoutCardManager)
                                     }
                                 logger.log(
-                                    LogEvent.CardList(cards.map { it.id }),
+                                    event =
+                                        LogEvent.CardList(
+                                            cardIds = cards.map { it.id },
+                                            requestedStatuses = statuses,
+                                        ),
                                     startTime,
                                 )
                                 completionHandler(Result.success(cards))
@@ -159,9 +195,31 @@ public class CheckoutCardManager internal constructor(
             }
         }
     }
+
+    public fun getCard(
+        cardId: String,
+        completionHandler: CardResultCompletion,
+    ) {
+        coroutineScope.scope.launch {
+            sessionToken?.let {
+                val cardResult = service.getCard(cardId = cardId, sessionToken = it)
+
+                cardResult.fold(
+                    onSuccess = { domainCard ->
+                        val card = Card.fromNetworkCard(networkCard = domainCard, manager = this@CheckoutCardManager)
+                        completionHandler(Result.success(card))
+                    },
+                    onFailure = { error ->
+                        completionHandler(Result.failure(error.toCardManagementError()))
+                    },
+                )
+            } ?: completionHandler(Result.failure(CardManagementError.Unauthenticated))
+        }
+    }
 }
 
 /**
  * Completion handler returning a Result of a List of Card
  */
 public typealias CardListResultCompletion = (Result<List<Card>>) -> Unit
+public typealias CardResultCompletion = (Result<Card>) -> Unit

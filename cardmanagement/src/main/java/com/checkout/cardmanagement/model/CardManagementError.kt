@@ -32,6 +32,8 @@ public sealed class CardManagementError : Exception() {
     /** Requested to change card to an unavailable state */
     public object InvalidStateRequested : CardManagementError()
 
+    public object NotFound : CardManagementError()
+
     public data class UnsupportedAPIVersion(
         val currentVersion: Int,
     ) : CardManagementError() {
@@ -110,6 +112,8 @@ internal fun Throwable.toCardManagementError(): CardManagementError =
                             CardManagementError.DigitizationStateFailureType.OPERATION_FAILURE,
                         )
                 }
+
+            CardNetworkError.NotFound -> CardManagementError.NotFound
         }
     }
 

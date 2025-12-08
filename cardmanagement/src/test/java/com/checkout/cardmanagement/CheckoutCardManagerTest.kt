@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.text.TextStyle
+import com.checkout.cardmanagement.Fixtures.NETWORK_CARD
 import com.checkout.cardmanagement.Fixtures.NETWORK_CARD_LIST
 import com.checkout.cardmanagement.Fixtures.createCard
 import com.checkout.cardmanagement.logging.CheckoutEventLogger
@@ -27,15 +28,22 @@ import com.checkout.cardmanagement.model.getPin
 import com.checkout.cardmanagement.model.getSecurityCode
 import com.checkout.cardmanagement.model.parse
 import com.checkout.cardmanagement.model.toCardManagementError
+import com.checkout.cardmanagement.utils.CoroutineScopeOwner
 import com.checkout.cardnetwork.CardService
 import com.checkout.cardnetwork.CheckoutCardService
 import com.checkout.cardnetwork.common.model.CardNetworkError
 import com.checkout.cardnetwork.common.model.Environment
 import junit.framework.TestCase.assertNull
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -51,12 +59,21 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import java.util.Calendar
 
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class CheckoutCardManagerTest {
     private val activity: Activity = mock()
     private val cardService: CardService = mock()
     private val checkoutCardService: CheckoutCardService = mock()
     private val logger: CheckoutEventLogger = mock()
     private val context: Context = mock()
+    private val testDispatcher = StandardTestDispatcher()
+    private val testScope = TestScope(testDispatcher)
+    private val testCoroutineScopeOwner =
+        object : CoroutineScopeOwner {
+            override val scope: CoroutineScope = testScope
+
+            override fun cancel() {}
+        }
     private val resultCaptor = argumentCaptor<(Result<Unit>) -> Unit>()
     private lateinit var manager: CheckoutCardManager
     private lateinit var card: Card
@@ -71,6 +88,7 @@ internal class CheckoutCardManagerTest {
                 DESIGN_SYSTEM,
                 checkoutCardService,
                 logger,
+                testCoroutineScopeOwner,
             )
         card = createCard(manager)
     }
@@ -204,7 +222,9 @@ internal class CheckoutCardManagerTest {
     @Test
     fun `getCards should collect CardNetworkError and return CardManagementError`() {
         getAllCardManageErrors().forEach { cardNetworkError ->
-            `when`(cardService.getCards(anyString())).thenReturn(
+            `when`(
+                cardService.getCards(anyString(), org.mockito.kotlin.any()),
+            ).thenReturn(
                 flow {
                     emit(Result.failure(cardNetworkError))
                 },
@@ -220,7 +240,12 @@ internal class CheckoutCardManagerTest {
     @Test
     fun `getCards should catch CardNetworkError and return CardManagementError`() {
         getAllCardManageErrors().forEach { cardNetworkError ->
-            `when`(cardService.getCards(anyString())).thenReturn(
+            `when`(
+                cardService.getCards(
+                    sessionToken = anyString(),
+                    statuses = org.mockito.kotlin.any(),
+                ),
+            ).thenReturn(
                 flow {
                     throw cardNetworkError
                 },
@@ -235,7 +260,12 @@ internal class CheckoutCardManagerTest {
 
     @Test
     fun `getCards should collect CardNetworkError and log it`() {
-        `when`(cardService.getCards(anyString())).thenReturn(
+        `when`(
+            cardService.getCards(
+                sessionToken = anyString(),
+                statuses = org.mockito.kotlin.any(),
+            ),
+        ).thenReturn(
             flow {
                 emit(Result.failure(CardNetworkError.ServerIssue))
             },
@@ -279,8 +309,139 @@ internal class CheckoutCardManagerTest {
             (eventCaptor.firstValue as LogEvent.CardList).cardIds.forEachIndexed { index, cardId ->
                 assertEquals(cards!![index].id, cardId)
             }
+            (eventCaptor.firstValue as LogEvent.CardList).requestedStatuses.isEmpty()
         }
     }
+
+    @Test
+    fun `getCards with status parameter should forward mapped status to service`() {
+        // GIVEN
+        val managementStatusList =
+            setOf(
+                com.checkout.cardmanagement.model.CardState.ACTIVE,
+                com.checkout.cardmanagement.model.CardState.SUSPENDED,
+            )
+        val expectedNetworkStatusList =
+            setOf(
+                com.checkout.cardnetwork.data.dto.CardState.ACTIVE,
+                com.checkout.cardnetwork.data.dto.CardState.SUSPENDED,
+            )
+
+        manager.logInSession(VALID_TOKEN)
+
+        // WHEN
+        manager.getCards(statuses = managementStatusList) { result ->
+            // Should be successful
+            assertTrue(result.isSuccess)
+        }
+
+        // THEN
+        verify(cardService).getCards(
+            sessionToken = VALID_TOKEN,
+            statuses = expectedNetworkStatusList,
+        )
+    }
+
+    @Test
+    fun `getCards with empty status parameter should call service with empty status list`() {
+        manager.logInSession(VALID_TOKEN)
+
+        manager.getCards(statuses = setOf()) { result ->
+            assertTrue(result.isSuccess)
+        }
+    }
+
+    @Test
+    fun `getCards should map all CardState values correctly`() {
+        val allManagementStates =
+            setOf(
+                com.checkout.cardmanagement.model.CardState.ACTIVE,
+                com.checkout.cardmanagement.model.CardState.INACTIVE,
+                com.checkout.cardmanagement.model.CardState.SUSPENDED,
+                com.checkout.cardmanagement.model.CardState.REVOKED,
+            )
+        val expectedNetworkStates =
+            setOf(
+                com.checkout.cardnetwork.data.dto.CardState.ACTIVE,
+                com.checkout.cardnetwork.data.dto.CardState.INACTIVE,
+                com.checkout.cardnetwork.data.dto.CardState.SUSPENDED,
+                com.checkout.cardnetwork.data.dto.CardState.REVOKED,
+            )
+
+        manager.logInSession(VALID_TOKEN)
+
+        manager.getCards(statuses = allManagementStates) { result ->
+            assertTrue(result.isSuccess)
+        }
+
+        verify(cardService).getCards(
+            sessionToken = VALID_TOKEN,
+            statuses = expectedNetworkStates,
+        )
+    }
+
+    @Test
+    fun `getCard should return Unauthenticated when session token is null`() =
+        runTest {
+            // WHEN
+            manager.getCard(CARD_ID) { result ->
+                // THEN
+                assertTrue(result.isFailure)
+                assertEquals(CardManagementError.Unauthenticated, result.exceptionOrNull())
+            }
+
+            // Advance coroutines to ensure completion handler is called
+            testScope.advanceUntilIdle()
+        }
+
+    @Test
+    fun `getCard should return success when service returns card`() =
+        runTest {
+            // GIVEN
+            `when`(cardService.getCard(CARD_ID, VALID_TOKEN))
+                .thenReturn(Result.success(NETWORK_CARD))
+
+            manager.logInSession(VALID_TOKEN)
+
+            // WHEN
+            manager.getCard(CARD_ID) { result ->
+                // THEN
+                assertTrue(result.isSuccess)
+                val card = result.getOrNull()
+                assertEquals(NETWORK_CARD.id, card?.id)
+                assertEquals(NETWORK_CARD.panLast4Digits, card?.panLast4Digits)
+                assertEquals(NETWORK_CARD.state.name, card?.state?.name)
+            }
+
+            // Advance coroutines to ensure completion handler is called
+            testScope.advanceUntilIdle()
+        }
+
+    @Test
+    fun `getCard should return CardManagementError when service returns error`() =
+        runTest {
+            listOf(
+                CardNetworkError.ServerIssue,
+                CardNetworkError.AuthenticationFailure,
+                CardNetworkError.NotFound,
+            ).forEach { cardNetworkError ->
+                // GIVEN
+                `when`(cardService.getCard(CARD_ID, VALID_TOKEN))
+                    .thenReturn(Result.failure(cardNetworkError))
+
+                manager.logInSession(VALID_TOKEN)
+
+                // WHEN
+                manager.getCard(CARD_ID) { result ->
+                    // THEN
+                    assertTrue(result.isFailure)
+                    assertEquals(cardNetworkError.toCardManagementError(), result.exceptionOrNull())
+                }
+
+                // Advance coroutines to ensure completion handler is called
+                testScope.advanceUntilIdle()
+            }
+        }
 
     @Test
     fun `displayPin should call completionHandler with a failure Result if a failure result is returned`() {
@@ -579,7 +740,7 @@ internal class CheckoutCardManagerTest {
             ),
         ).thenReturn(flowOf(Result.success(Unit)))
 
-        card.copyPan(SINGLE_USE_TOKEN) { result ->
+        card.copyPan(SINGLE_USE_TOKEN) { _ ->
             val eventCaptor = argumentCaptor<LogEvent>()
             verify(logger).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
             assertTrue(eventCaptor.firstValue is LogEvent.CopyPan)
@@ -687,16 +848,20 @@ internal class CheckoutCardManagerTest {
         `when`(cardService.isTokenValid(VALID_TOKEN)).thenReturn(true)
         `when`(cardService.isTokenValid(VALID_TOKEN_2)).thenReturn(true)
         `when`(cardService.isTokenValid(INVALID_TOKEN)).thenReturn(false)
-        `when`(cardService.getCards(anyString()))
-            .thenReturn(
-                flow {
-                    try {
-                        emit(Result.success(NETWORK_CARD_LIST))
-                    } catch (e: Exception) {
-                        emit(Result.failure(e))
-                    }
-                },
-            )
+        `when`(
+            cardService.getCards(
+                anyString(),
+                statuses = org.mockito.kotlin.any(),
+            ),
+        ).thenReturn(
+            flow {
+                try {
+                    emit(Result.success(NETWORK_CARD_LIST))
+                } catch (e: Exception) {
+                    emit(Result.failure(e))
+                }
+            },
+        )
         `when`(checkoutCardService.initialize(context, Environment.SANDBOX)).thenReturn(cardService)
     }
 
@@ -728,6 +893,7 @@ internal class CheckoutCardManagerTest {
         private const val VALID_TOKEN_2 = "VALID_TOKEN_2"
         private const val INVALID_TOKEN = "INVALID_TOKEN"
         private const val CARDHOLDER_ID = "CARDHOLDER_ID"
+        private const val CARD_ID = "crd_a3o34dts4geuvp7dg3wwuh27wy"
         private const val CONFIGURATION_ERROR_HINT = "HINT"
         private val CONFIG =
             ProvisioningConfiguration(
@@ -751,6 +917,7 @@ internal class CheckoutCardManagerTest {
                     CardManagementError.PanNotViewedFailure,
                     CardManagementError.PushProvisioningFailure(OPERATION_FAILURE),
                     CardManagementError.FetchDigitizationStateFailure(CardManagementError.DigitizationStateFailureType.OPERATION_FAILURE),
+                    CardManagementError.NotFound,
                 )
             if (errorList.size != CardManagementError::class.sealedSubclasses.size) {
                 throw Exception("One or more CardManagementError is missing in the errorList.")
