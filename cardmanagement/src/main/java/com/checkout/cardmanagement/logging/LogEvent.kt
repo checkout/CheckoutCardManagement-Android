@@ -14,6 +14,7 @@ internal sealed class LogEvent {
     /** Describe a successful retrieval of the card list */
     internal data class CardList(
         val cardIds: List<String>,
+        val requestedStatuses: Set<CardState>,
     ) : LogEvent()
 
     /** Describe a successful call to retrieve a pin */

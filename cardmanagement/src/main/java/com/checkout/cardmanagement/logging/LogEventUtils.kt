@@ -48,6 +48,7 @@ internal class LogEventUtils {
         internal const val KEY_PIN_TEXT_STYLE = "pinTextStyle"
         internal const val KEY_CVV_TEXT_STYLE = "cvvTextStyle"
         internal const val KEY_CARD_IDS = "cardIds"
+        internal const val KEY_STATUSES = "statuses"
         internal const val KEY_CARD_ID = "cardId"
         internal const val KEY_CARD_STATE = "card_state"
         internal const val KEY_FROM = "from"
@@ -127,7 +128,10 @@ internal class LogEventUtils {
                         }
                 }
 
-                is LogEvent.CardList -> propertyMap[KEY_CARD_IDS] = cardIds
+                is LogEvent.CardList -> {
+                    propertyMap[KEY_CARD_IDS] = cardIds
+                    propertyMap[KEY_STATUSES] = requestedStatuses
+                }
                 is LogEvent.GetPin,
                 is LogEvent.GetPan,
                 is LogEvent.GetCVV,
