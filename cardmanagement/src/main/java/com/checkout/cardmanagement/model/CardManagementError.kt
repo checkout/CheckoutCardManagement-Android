@@ -65,6 +65,16 @@ public sealed class CardManagementError : Exception() {
 
         /** Failed to perform Push Provisioning operation */
         OPERATION_FAILURE,
+
+        ERROR_DEVICE_ENVIRONMENT_UNSAFE,
+
+        ERROR_DEBUG_SDK_USED,
+
+        ERROR_CARD_NOT_FOUND,
+
+        ERROR_GPAY_NOT_SUPPORTED,
+
+        ERROR_NOT_LOGGED_IN,
     }
 
     /** Types of the failure for Push Provisioning request */
@@ -98,6 +108,26 @@ internal fun Throwable.toCardManagementError(): CardManagementError =
 
                     PushProvisioningFailureType.OPERATION_FAILURE ->
                         PushProvisioningFailure(CardManagementError.PushProvisioningFailureType.OPERATION_FAILURE)
+
+                    PushProvisioningFailureType.ERROR_NOT_LOGGED_IN -> {
+                        PushProvisioningFailure(CardManagementError.PushProvisioningFailureType.ERROR_NOT_LOGGED_IN)
+                    }
+                    PushProvisioningFailureType.ERROR_DEVICE_ENVIRONMENT_UNSAFE -> {
+                        PushProvisioningFailure(
+                            CardManagementError.PushProvisioningFailureType.ERROR_DEVICE_ENVIRONMENT_UNSAFE,
+                        )
+                    }
+                    PushProvisioningFailureType.ERROR_GPAY_NOT_SUPPORTED -> {
+                        PushProvisioningFailure(
+                            CardManagementError.PushProvisioningFailureType.ERROR_GPAY_NOT_SUPPORTED,
+                        )
+                    }
+                    PushProvisioningFailureType.ERROR_DEBUG_SDK_USED -> {
+                        PushProvisioningFailure(CardManagementError.PushProvisioningFailureType.ERROR_DEBUG_SDK_USED)
+                    }
+                    PushProvisioningFailureType.ERROR_CARD_NOT_FOUND -> {
+                        PushProvisioningFailure(CardManagementError.PushProvisioningFailureType.ERROR_CARD_NOT_FOUND)
+                    }
                 }
 
             is CardNetworkError.FetchDigitizationStateFailure ->

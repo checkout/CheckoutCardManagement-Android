@@ -3,6 +3,7 @@ package com.checkout.cardmanagement.utils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
 import kotlin.coroutines.CoroutineContext
 
 internal class DefaultCoroutineScopeHandler : CoroutineScopeOwner {
@@ -12,6 +13,6 @@ internal class DefaultCoroutineScopeHandler : CoroutineScopeOwner {
     override val scope: CoroutineScope = CoroutineScope(scopeContext)
 
     override fun cancel() {
-        scopeJob.cancel()
+        scopeJob.cancelChildren()
     }
 }
