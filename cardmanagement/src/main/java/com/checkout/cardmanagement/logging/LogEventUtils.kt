@@ -61,6 +61,8 @@ internal class LogEventUtils {
         internal const val KEY_DURATION = "duration"
         internal const val LOGGER_PRODUCTION_ID = "com.checkout.issuing-mobile-sdk"
 
+        internal const val KEY_LEGACY_REQUEST = "isLegacyRequest"
+
         // Define unique identifier for event
         private fun LogEvent.identifier(): String =
             when (this) {
@@ -214,7 +216,7 @@ private fun buildTextStyleMap(textStyle: TextStyle) =
     }
 
 /**
- * Put the [TextStyle] property in the map if the value is not [kotlin.null] or [unspecifiedValue].
+ * Put the [TextStyle] property in the map if the value is not null or [unspecifiedValue].
  */
 private fun <T> MutableMap<String, String>.putIfNotNullOrNotUnspecified(
     textStyle: TextStyle,
