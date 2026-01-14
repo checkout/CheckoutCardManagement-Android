@@ -13,3 +13,4 @@ dependencyResolutionManagement {
     }
 }
 include ':cardmanagement'
+include ':cardnetwork'
