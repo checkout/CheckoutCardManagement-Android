@@ -112,9 +112,9 @@ internal class CheckoutCardManagerTest {
     fun `assign logger to card service`() {
         // when service is called
         manager.service
-        // service is initialised and logger assigned
+        // service is initialised and SDK initialized
         verify(checkoutCardService).initialize(eq(context), eq(SANDBOX.parse()))
-        verify(cardService).setLogger(logger)
+        verify(cardService).onSdkInitialised(eq(SANDBOX.parse()))
     }
 
     @Test
@@ -337,62 +337,56 @@ internal class CheckoutCardManagerTest {
     }
 
     @Test
-    fun `getCards should collect CardNetworkError and return CardManagementError`() {
-        val testError = CardNetworkError.AuthenticationFailure
-        `when`(
-            cardService.getCards(anyString(), org.mockito.kotlin.any()),
-        ).thenReturn(
-            flow {
-                emit(Result.failure(testError))
-            },
-        )
-        manager.logInSession(VALID_TOKEN)
-        manager.getCards {
-            assertTrue(it.isFailure)
-            assertTrue(it.exceptionOrNull() is CardManagementError)
+    fun `getCards should collect CardNetworkError and return CardManagementError`() =
+        runBlocking {
+            val testError = CardNetworkError.AuthenticationFailure
+            `when`(
+                cardService.getCards(anyString(), org.mockito.kotlin.any()),
+            ).thenReturn(Result.failure(testError))
+
+            manager.logInSession(VALID_TOKEN)
+            manager.getCards {
+                assertTrue(it.isFailure)
+                assertTrue(it.exceptionOrNull() is CardManagementError)
+            }
         }
-    }
 
     @Test
-    fun `getCards should catch CardNetworkError and return CardManagementError`() {
-        val testError = CardNetworkError.AuthenticationFailure
-        `when`(
-            cardService.getCards(
-                sessionToken = anyString(),
-                statuses = org.mockito.kotlin.any(),
-            ),
-        ).thenReturn(
-            flow {
-                throw testError
-            },
-        )
-        manager.logInSession(VALID_TOKEN)
-        manager.getCards {
-            assertTrue(it.isFailure)
-            assertTrue(it.exceptionOrNull() is CardManagementError)
+    fun `getCards should catch CardNetworkError and return CardManagementError`() =
+        runBlocking {
+            val testError = CardNetworkError.AuthenticationFailure
+            `when`(
+                cardService.getCards(
+                    sessionToken = anyString(),
+                    statuses = org.mockito.kotlin.any(),
+                ),
+            ).thenAnswer { throw testError }
+
+            manager.logInSession(VALID_TOKEN)
+            manager.getCards {
+                assertTrue(it.isFailure)
+                assertTrue(it.exceptionOrNull() is CardManagementError)
+            }
         }
-    }
 
     @Test
-    fun `getCards should collect CardNetworkError and log it`() {
-        `when`(
-            cardService.getCards(
-                sessionToken = anyString(),
-                statuses = org.mockito.kotlin.any(),
-            ),
-        ).thenReturn(
-            flow {
-                emit(Result.failure(CardNetworkError.ServerIssue))
-            },
-        )
-        manager.logInSession(VALID_TOKEN)
-        manager.getCards {
-            assertFailureLogEvent(
-                expectedSource = GET_CARDS,
-                expectedError = CardNetworkError.ServerIssue,
-            )
+    fun `getCards should collect CardNetworkError and log it`() =
+        runBlocking {
+            `when`(
+                cardService.getCards(
+                    sessionToken = anyString(),
+                    statuses = org.mockito.kotlin.any(),
+                ),
+            ).thenReturn(Result.failure(CardNetworkError.ServerIssue))
+
+            manager.logInSession(VALID_TOKEN)
+            manager.getCards {
+                assertFailureLogEvent(
+                    expectedSource = GET_CARDS,
+                    expectedError = CardNetworkError.ServerIssue,
+                )
+            }
         }
-    }
 
     @Test
     fun `getCardList should return a card list`() {
@@ -454,10 +448,12 @@ internal class CheckoutCardManagerTest {
         testScope.advanceUntilIdle()
 
         // THEN
-        verify(cardService).getCards(
-            sessionToken = VALID_TOKEN,
-            statuses = expectedNetworkStatusList,
-        )
+        runBlocking {
+            verify(cardService).getCards(
+                sessionToken = VALID_TOKEN,
+                statuses = expectedNetworkStatusList,
+            )
+        }
     }
 
     @Test
@@ -495,10 +491,12 @@ internal class CheckoutCardManagerTest {
         // Advance coroutines to ensure completion handler is called
         testScope.advanceUntilIdle()
 
-        verify(cardService).getCards(
-            sessionToken = VALID_TOKEN,
-            statuses = expectedNetworkStates,
-        )
+        runBlocking {
+            verify(cardService).getCards(
+                sessionToken = VALID_TOKEN,
+                statuses = expectedNetworkStates,
+            )
+        }
     }
 
     @Test
@@ -923,7 +921,7 @@ internal class CheckoutCardManagerTest {
     fun `suspend getCards should throw CardManagementError on network failure`() =
         runBlocking {
             `when`(cardService.getCards(eq(VALID_TOKEN), eq(emptySet()))).thenReturn(
-                flow { emit(Result.failure(CardNetworkError.ServerIssue)) },
+                Result.failure(CardNetworkError.ServerIssue),
             )
             manager.logInSession(VALID_TOKEN)
 
@@ -1249,14 +1247,14 @@ internal class CheckoutCardManagerTest {
         `when`(cardService.isTokenValid(VALID_TOKEN)).thenReturn(true)
         `when`(cardService.isTokenValid(VALID_TOKEN_2)).thenReturn(true)
         `when`(cardService.isTokenValid(INVALID_TOKEN)).thenReturn(false)
-        `when`(
-            cardService.getCards(
-                anyString(),
-                statuses = org.mockito.kotlin.any(),
-            ),
-        ).thenReturn(
-            flowOf(Result.success(NETWORK_CARD_LIST)),
-        )
+        runBlocking {
+            `when`(
+                cardService.getCards(
+                    anyString(),
+                    statuses = org.mockito.kotlin.any(),
+                ),
+            ).thenReturn(Result.success(NETWORK_CARD_LIST))
+        }
         `when`(checkoutCardService.initialize(context, Environment.SANDBOX)).thenReturn(cardService)
     }
 

@@ -23,8 +23,6 @@ import com.checkout.cardnetwork.CheckoutCardService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -85,7 +83,7 @@ public class CheckoutCardManager internal constructor(
         checkoutCardService
             .initialize(context, environment.parse())
             .also { cardService ->
-                cardService.setLogger(logger)
+                cardService.onSdkInitialised(environment.parse())
             }
     }
 
@@ -315,33 +313,18 @@ public class CheckoutCardManager internal constructor(
         }
 
         coroutineScope.scope.launch {
-            val startTime = Calendar.getInstance()
             service
                 .getCards(
                     sessionToken = token,
                     statuses = statuses.mapNotNull { it.toNetworkCardState() }.toSet(),
-                ).catch {
-                    completionHandler(Result.failure(it.toCardManagementError()))
-                }.collect { result ->
-                    result
-                        .onSuccess { cardList ->
-                            val cards =
-                                cardList.cards.map { networkCard ->
-                                    Card.fromNetworkCard(networkCard, this@CheckoutCardManager)
-                                }
-                            logger.log(
-                                event =
-                                    LogEvent.CardList(
-                                        cardIds = cards.map { it.id },
-                                        requestedStatuses = statuses,
-                                    ),
-                                startTime,
-                            )
-                            completionHandler(Result.success(cards))
-                        }.onFailure {
-                            logger.log(LogEvent.Failure(source = GET_CARDS, it), startTime)
-                            completionHandler(Result.failure(it.toCardManagementError()))
+                ).onSuccess { cardList ->
+                    val cards =
+                        cardList.cards.map { networkCard ->
+                            Card.fromNetworkCard(networkCard, this@CheckoutCardManager)
                         }
+                    completionHandler(Result.success(cards))
+                }.onFailure {
+                    completionHandler(Result.failure(it.toCardManagementError()))
                 }
         }
     }
@@ -509,8 +492,6 @@ public class CheckoutCardManager internal constructor(
             val startTime = Calendar.getInstance()
             service
                 .getCards(token, statuses = statuses.mapNotNull { it.toNetworkCardState() }.toSet())
-                .catch { throw it.toCardManagementError() }
-                .first()
                 .fold(
                     onSuccess = { cardList ->
                         val cards =

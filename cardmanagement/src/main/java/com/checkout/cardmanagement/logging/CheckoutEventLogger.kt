@@ -6,7 +6,7 @@ import com.checkout.cardmanagement.logging.LogEventUtils.Companion.LOGGER_PRODUC
 import com.checkout.cardnetwork.common.NetworkLogger
 import com.checkout.cardnetwork.common.model.CardServiceVersion
 import com.checkout.cardnetwork.common.model.Environment
-import com.checkout.eventlogger.METADATA_CORRELATION_ID
+import com.checkout.eventlogger.domain.model.MetadataKey
 import com.checkout.eventlogger.domain.model.MonitoringLevel
 import com.checkout.eventlogger.domain.model.RemoteProcessorMetadata
 import java.util.Calendar
@@ -40,7 +40,7 @@ internal class CheckoutEventLogger
             environment: Environment,
             serviceVersion: CardServiceVersion,
         ) {
-            logger.addMetadata(METADATA_CORRELATION_ID, sessionID)
+            logger.addMetadata(MetadataKey.correlationId, sessionID)
 
             logger.enableRemoteProcessor(
                 environment.toLoggingEnvironment(),

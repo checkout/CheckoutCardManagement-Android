@@ -77,4 +77,39 @@ internal class CardManagementErrorTest {
             CardNetworkError.ParsingFailure.toCardManagementError(),
         )
     }
+
+    @Test
+    fun `PushProvisioningFailure with SERVER_ERROR should map to UnableToPerformSecureOperation`() {
+        assertEquals(
+            CardManagementError.UnableToPerformSecureOperation,
+            CardNetworkError
+                .PushProvisioningFailure(
+                    CardNetworkError.PushProvisioningFailureType.SERVER_ERROR,
+                ).toCardManagementError(),
+        )
+    }
+
+    @Test
+    fun `PushProvisioningFailure with all other types should map correctly`() {
+        val mappings =
+            mapOf(
+                CardNetworkError.PushProvisioningFailureType.ERROR_NOT_LOGGED_IN to
+                    CardManagementError.PushProvisioningFailureType.ERROR_NOT_LOGGED_IN,
+                CardNetworkError.PushProvisioningFailureType.ERROR_DEVICE_ENVIRONMENT_UNSAFE to
+                    CardManagementError.PushProvisioningFailureType.ERROR_DEVICE_ENVIRONMENT_UNSAFE,
+                CardNetworkError.PushProvisioningFailureType.ERROR_GPAY_NOT_SUPPORTED to
+                    CardManagementError.PushProvisioningFailureType.ERROR_GPAY_NOT_SUPPORTED,
+                CardNetworkError.PushProvisioningFailureType.ERROR_DEBUG_SDK_USED to
+                    CardManagementError.PushProvisioningFailureType.ERROR_DEBUG_SDK_USED,
+                CardNetworkError.PushProvisioningFailureType.ERROR_CARD_NOT_FOUND to
+                    CardManagementError.PushProvisioningFailureType.ERROR_CARD_NOT_FOUND,
+            )
+
+        mappings.forEach { (networkErrorType, managementErrorType) ->
+            assertEquals(
+                CardManagementError.PushProvisioningFailure(managementErrorType),
+                CardNetworkError.PushProvisioningFailure(networkErrorType).toCardManagementError(),
+            )
+        }
+    }
 }
