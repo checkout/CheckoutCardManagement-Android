@@ -28,6 +28,11 @@ internal fun Throwable.toCardSecureDataError(): CardSecureDataResult.Error =
                 message = error.message ?: "PAN not viewed",
             )
 
+        CardManagementError.SecurityCodeNotViewedFailure ->
+            CardSecureDataResult.Error.SecurityCodeNotViewed(
+                message = error.message ?: "Security code not viewed",
+            )
+
         CardManagementError.UnableToPerformSecureOperation ->
             CardSecureDataResult.Error.UnableToPerformOperation(
                 message = this.message ?: error.message ?: "Secure operation failed",
@@ -67,6 +72,9 @@ internal fun <T> CardSecureDataResult<T>.getOrThrow(): T =
 
         is CardSecureDataResult.Error.PanNotViewed ->
             throw CardManagementError.PanNotViewedFailure
+
+        is CardSecureDataResult.Error.SecurityCodeNotViewed ->
+            throw CardManagementError.SecurityCodeNotViewedFailure
 
         is CardSecureDataResult.Error.UnableToPerformOperation ->
             throw CardManagementError.UnableToPerformSecureOperation
