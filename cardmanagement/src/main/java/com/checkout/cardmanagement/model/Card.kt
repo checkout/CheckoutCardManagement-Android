@@ -11,6 +11,8 @@ package com.checkout.cardmanagement.model
  *
  * @see com.checkout.cardmanagement.CheckoutCardManager.getCards
  * @see CardState
+ * @see CardType
+ * @see CardScheme
  * @see CardExpiryDate
  */
 public data class Card(
@@ -24,6 +26,9 @@ public data class Card(
     public val cardholderName: String,
     /** Unique identifier for this card, used for card operations and tracking (not the card PAN) */
     public val id: String,
+    public val type: CardType = CardType.UNKNOWN,
+    /** Payment scheme of the card, e.g. Visa or Mastercard */
+    public val cardScheme: CardScheme = CardScheme.UNKNOWN,
     /** A reference to the manager is required to enable sharing of the design system and the card service
      *	Enables object to carry operations that depend on it
      */
@@ -46,6 +51,8 @@ public data class Card(
                 ),
             cardholderName = networkCard.displayName ?: "",
             id = networkCard.id,
+            type = networkCard.type.toCardType(),
+            cardScheme = networkCard.scheme.toCardScheme(),
             manager = manager,
         )
     }

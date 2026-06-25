@@ -47,6 +47,12 @@ internal sealed class LogEvent {
         val cardState: CardState,
     ) : LogEvent()
 
+    /** Describe a successful call to copy security code to clipboard */
+    internal data class CopyCVV(
+        val cardId: String,
+        val cardState: CardState,
+    ) : LogEvent()
+
     /** Describe a successful event where a card state change was completed */
     internal data class StateManagement(
         val cardId: String,
@@ -85,6 +91,7 @@ internal object LogEventSource {
     internal const val GET_CVV = "Get Security Code"
     internal const val GET_PAN_AND_CVV = "Get Pan and SecurityCode"
     internal const val COPY_PAN = "Copy Pan"
+    internal const val COPY_CVV = "Copy Security Code"
     internal const val CONFIGURE_PUSH_PROVISIONING = "Configure Push Provisioning"
     internal const val GET_CARD_DIGITIZATION_STATE = "Get Card Digitization State"
     internal const val PUSH_PROVISIONING = "Push Provisioning"

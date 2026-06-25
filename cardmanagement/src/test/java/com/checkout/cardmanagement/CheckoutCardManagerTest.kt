@@ -23,6 +23,7 @@ import com.checkout.cardmanagement.model.CardSecureDataResult
 import com.checkout.cardmanagement.model.Environment.SANDBOX
 import com.checkout.cardmanagement.model.ProvisioningConfiguration
 import com.checkout.cardmanagement.model.copyPan
+import com.checkout.cardmanagement.model.copySecurityCode
 import com.checkout.cardmanagement.model.getPANAndSecurityCode
 import com.checkout.cardmanagement.model.getPan
 import com.checkout.cardmanagement.model.getPin
@@ -934,6 +935,121 @@ internal class CheckoutCardManagerTest {
         }
 
     @Test
+    fun `suspend getCards should log a CardList event with the returned card ids and requested statuses`() =
+        runBlocking {
+            manager.logInSession(VALID_TOKEN)
+
+            manager.getCards()
+
+            val eventCaptor = argumentCaptor<LogEvent>()
+            verify(logger, atLeastOnce()).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
+            val cardListEvent = eventCaptor.allValues.firstOrNull { it is LogEvent.CardList } as? LogEvent.CardList
+            assertTrue(cardListEvent != null)
+            assertEquals(
+                NETWORK_CARD_LIST.cards.map { it.id },
+                cardListEvent!!.cardIds,
+            )
+            assertTrue(cardListEvent.requestedStatuses.isEmpty())
+        }
+
+    @Test
+    fun `suspend getCards should log a Failure event when the service returns an error`() =
+        runBlocking {
+            `when`(cardService.getCards(eq(VALID_TOKEN), eq(emptySet()))).thenReturn(
+                Result.failure(CardNetworkError.ServerIssue),
+            )
+            manager.logInSession(VALID_TOKEN)
+
+            try {
+                manager.getCards()
+            } catch (_: CardManagementError) {
+                // expected — verified separately
+            }
+
+            assertFailureLogEvent(
+                expectedSource = GET_CARDS,
+                expectedError = CardNetworkError.ServerIssue,
+            )
+        }
+
+    @Test
+    fun `suspend getCard by id should throw Unauthenticated when session token is null`() =
+        runBlocking {
+            try {
+                manager.getCard(CARD_ID)
+                throw AssertionError("Expected CardManagementError.Unauthenticated to be thrown")
+            } catch (e: CardManagementError) {
+                assertEquals(CardManagementError.Unauthenticated, e)
+            }
+        }
+
+    @Test
+    fun `suspend getCard by id should return the card when service succeeds`() =
+        runBlocking {
+            `when`(cardService.getCard(CARD_ID, VALID_TOKEN))
+                .thenReturn(Result.success(NETWORK_CARD))
+            manager.logInSession(VALID_TOKEN)
+
+            val card = manager.getCard(CARD_ID)
+
+            assertEquals(NETWORK_CARD.id, card.id)
+            assertEquals(NETWORK_CARD.panLast4Digits, card.panLast4Digits)
+            assertEquals(NETWORK_CARD.state.name, card.state.name)
+        }
+
+    @Test
+    fun `suspend getCard by id should log a CardList event with the single returned id on success`() =
+        runBlocking {
+            `when`(cardService.getCard(CARD_ID, VALID_TOKEN))
+                .thenReturn(Result.success(NETWORK_CARD))
+            manager.logInSession(VALID_TOKEN)
+
+            manager.getCard(CARD_ID)
+
+            val eventCaptor = argumentCaptor<LogEvent>()
+            verify(logger, atLeastOnce()).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
+            val cardListEvent = eventCaptor.allValues.firstOrNull { it is LogEvent.CardList } as? LogEvent.CardList
+            assertTrue(cardListEvent != null)
+            assertEquals(listOf(NETWORK_CARD.id), cardListEvent!!.cardIds)
+            assertTrue(cardListEvent.requestedStatuses.isEmpty())
+        }
+
+    @Test
+    fun `suspend getCard by id should throw CardManagementError when service returns NotFound`() =
+        runBlocking {
+            `when`(cardService.getCard(CARD_ID, VALID_TOKEN))
+                .thenReturn(Result.failure(CardNetworkError.NotFound))
+            manager.logInSession(VALID_TOKEN)
+
+            try {
+                manager.getCard(CARD_ID)
+                throw AssertionError("Expected CardManagementError to be thrown")
+            } catch (e: CardManagementError) {
+                assertEquals(CardManagementError.NotFound, e)
+            }
+        }
+
+    @Test
+    fun `suspend getCard by id should throw mapped error and log Failure on network failure`() =
+        runBlocking {
+            `when`(cardService.getCard(CARD_ID, VALID_TOKEN))
+                .thenReturn(Result.failure(CardNetworkError.ServerIssue))
+            manager.logInSession(VALID_TOKEN)
+
+            try {
+                manager.getCard(CARD_ID)
+                throw AssertionError("Expected CardManagementError to be thrown")
+            } catch (e: CardManagementError) {
+                assertEquals(CardManagementError.ConnectionIssue, e)
+            }
+
+            assertFailureLogEvent(
+                expectedSource = GET_CARDS,
+                expectedError = CardNetworkError.ServerIssue,
+            )
+        }
+
+    @Test
     fun `suspend getPin should return Success with AbstractComposeView on success`() =
         runBlocking {
             val expectedView: AbstractComposeView = mock()
@@ -1108,6 +1224,88 @@ internal class CheckoutCardManagerTest {
 
             val result = card.copyPan(SINGLE_USE_TOKEN)
             assertTrue(result is CardSecureDataResult.Success)
+        }
+
+    @Test
+    fun `copySecurityCode should call completionHandler with a success Result if no error is caught`() {
+        `when`(
+            cardService.copySecurityCode(
+                card.id,
+                SINGLE_USE_TOKEN,
+            ),
+        ).thenReturn(flowOf(Result.success(Unit)))
+
+        card.copySecurityCode(SINGLE_USE_TOKEN) { result ->
+            assertTrue(result.isSuccess)
+        }
+    }
+
+    @Test
+    fun `copySecurityCode should call completionHandler with a failure Result if a failure result is returned`() {
+        val testError = CardNetworkError.SecurityCodeNotViewedFailure
+        `when`(
+            cardService.copySecurityCode(
+                card.id,
+                SINGLE_USE_TOKEN,
+            ),
+        ).thenReturn(flow { emit(Result.failure(testError)) })
+
+        card.copySecurityCode(SINGLE_USE_TOKEN) { result ->
+            assertTrue(result.isFailure)
+            assertEquals(testError.toCardManagementError(), result.exceptionOrNull())
+        }
+    }
+
+    @Test
+    fun `copySecurityCode should log the CopyCVV event if the request is successful`() {
+        `when`(
+            cardService.copySecurityCode(
+                card.id,
+                SINGLE_USE_TOKEN,
+            ),
+        ).thenReturn(flowOf(Result.success(Unit)))
+
+        card.copySecurityCode(SINGLE_USE_TOKEN) { _ ->
+            val eventCaptor = argumentCaptor<LogEvent>()
+            verify(logger).log(eventCaptor.capture(), any(Calendar::class.java), eq(emptyMap<String, String>()))
+            assertTrue(eventCaptor.firstValue is LogEvent.CopyCVV)
+            assertEquals(
+                card.id,
+                (eventCaptor.firstValue as LogEvent.CopyCVV).cardId,
+            )
+            assertEquals(
+                card.state,
+                (eventCaptor.firstValue as LogEvent.CopyCVV).cardState,
+            )
+        }
+    }
+
+    @Test
+    fun `suspend copySecurityCode should return Success on success`() =
+        runBlocking {
+            `when`(
+                cardService.copySecurityCode(
+                    card.id,
+                    SINGLE_USE_TOKEN,
+                ),
+            ).thenReturn(flowOf(Result.success(Unit)))
+
+            val result = card.copySecurityCode(SINGLE_USE_TOKEN)
+            assertTrue(result is CardSecureDataResult.Success)
+        }
+
+    @Test
+    fun `suspend copySecurityCode should return SecurityCodeNotViewed error on not viewed failure`() =
+        runBlocking {
+            `when`(
+                cardService.copySecurityCode(
+                    card.id,
+                    SINGLE_USE_TOKEN,
+                ),
+            ).thenReturn(flow { emit(Result.failure(CardNetworkError.SecurityCodeNotViewedFailure)) })
+
+            val result = card.copySecurityCode(SINGLE_USE_TOKEN)
+            assertTrue(result is CardSecureDataResult.Error.SecurityCodeNotViewed)
         }
 
     @Test
@@ -1295,6 +1493,7 @@ internal class CheckoutCardManagerTest {
                 serviceRSAModulus = byteArrayOf(),
                 serviceURL = "SERVICE_URL",
                 digitalCardURL = "DIGITAL_CARD_URL",
+                visaClientAppId = null,
             )
 
         private fun getAllCardManageErrors(): List<CardManagementError> {
