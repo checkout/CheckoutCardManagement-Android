@@ -128,6 +128,8 @@ internal fun Throwable.toCardManagementError(): CardManagementError =
                     PushProvisioningFailureType.ERROR_CARD_NOT_FOUND -> {
                         PushProvisioningFailure(CardManagementError.PushProvisioningFailureType.ERROR_CARD_NOT_FOUND)
                     }
+
+                    PushProvisioningFailureType.SERVER_ERROR -> CardManagementError.UnableToPerformSecureOperation
                 }
 
             is CardNetworkError.FetchDigitizationStateFailure ->
