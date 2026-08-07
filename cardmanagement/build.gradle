@@ -41,6 +41,7 @@ android {
 
 dependencies {
     // Add `checkout-sdk-card-management-android`
+     implementation project(':cardnetwork')
 
     // for Kotlin flow
     implementation 'androidx.appcompat:appcompat:1.6.1'
