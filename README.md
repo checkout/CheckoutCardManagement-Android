@@ -1,5 +1,7 @@
 # CheckoutCardManagement-Android SDK
 
+[![Supported version](https://img.shields.io/github/v/release/checkout/CheckoutCardManagement-Android?sort=semver&label=supported&color=brightgreen)](#version-support)
+
 # Table of Contents
 - [What is the CheckoutCardManagement-Android SDK?](#What-is-the-CheckoutCardManagement-Android-SDK?)
 - [Environments](#Environments)
@@ -13,6 +15,7 @@
   - [Update card state](#Update-card-state)
   - [Retrieve Secure Data](#Retrieve-secure-data)
   - [Push Provisioning](#Push-provisioning)
+- [SDK Lifecycle Policy](#SDK-Lifecycle-Policy)
 - [Contact](#Contact)
 ***
 
@@ -244,6 +247,25 @@ card.provision(
 ```
 
 When you attempt a push provisioning operation without completing proper onboarding will result in an intentional crash.
+
+***
+
+# SDK Lifecycle Policy
+
+The [Mobile SDKs lifecycle policy](https://www.checkout.com/docs/developer-resources/sdks/mobile-sdks-lifecycle-policy) defines how long each version of the SDK is supported, and what support means at each stage. The CheckoutOOB SDK ships inside every release and follows the same lifecycle.
+
+## Version Support
+
+| Version | Released | Status | Not supported from |
+| --- | --- | --- | --- |
+| `5.1.0` | 2026-10-01 | Supported | Not applicable |
+| `5.0.0` | 2026-09-16 | Maintenance | 2027-01-01 |
+| `4.1.0` | 2026-09-03 | Maintenance | 2027-03-16 |
+| `4.0.0` | 2026-06-25 | Maintenance | 2026-12-03 |
+| `3.1.0` | 2026-06-18 | Maintenance | 2026-12-25 |
+| `3.0.0` down to `1.0.0` | 2023-06-28 to 2025-12-11 | Not supported | Passed |
+
+Maintenance versions receive critical security and bug fixes only. See [GitHub Releases](https://github.com/checkout/CheckoutCardManagement-Android/releases) for the full version history.
 
 ***
 
