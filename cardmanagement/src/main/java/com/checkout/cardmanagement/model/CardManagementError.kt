@@ -29,6 +29,9 @@ public sealed class CardManagementError : Exception() {
     /** Error when a pan is attempted to be copied without being viewed */
     public object PanNotViewedFailure : CardManagementError()
 
+    /** Error when a security code is attempted to be copied without being viewed */
+    public object SecurityCodeNotViewedFailure : CardManagementError()
+
     /** Requested to change card to an unavailable state */
     public object InvalidStateRequested : CardManagementError()
 
@@ -98,6 +101,7 @@ internal fun Throwable.toCardManagementError(): CardManagementError =
             CardNetworkError.Unauthenticated -> CardManagementError.Unauthenticated
             CardNetworkError.SecureOperationsFailure -> CardManagementError.UnableToPerformSecureOperation
             CardNetworkError.PanNotViewedFailure -> CardManagementError.PanNotViewedFailure
+            CardNetworkError.SecurityCodeNotViewedFailure -> CardManagementError.SecurityCodeNotViewedFailure
             is CardNetworkError.PushProvisioningFailure ->
                 when (this.type) {
                     PushProvisioningFailureType.CANCELLED ->

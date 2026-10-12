@@ -22,6 +22,23 @@ internal object Fixtures {
             state = CardState.ACTIVE,
             type = "virtual",
             isSingleUse = false,
+            scheme = "visa",
+        )
+    internal val NETWORK_CARD_PHYSICAL: NetworkCard =
+        NetworkCard(
+            cardholderId = "crh_shw5giae4mjufep6jdrdfvz5vu",
+            createdDate = "2023-02-01T16:39:13.76Z",
+            displayName = "CARD_HOLDER_NAME",
+            expiryMonth = "2",
+            expiryYear = "2025",
+            id = "crd_b4p45eus5hfvwq8eh4xxvi38xz",
+            panLast4Digits = "1234",
+            lastModifiedDate = "2023-02-01T16:39:13.76Z",
+            reference = null,
+            state = CardState.INACTIVE,
+            type = "physical",
+            isSingleUse = false,
+            scheme = "mastercard",
         )
     internal val NETWORK_CARD_LIST =
         CardList(

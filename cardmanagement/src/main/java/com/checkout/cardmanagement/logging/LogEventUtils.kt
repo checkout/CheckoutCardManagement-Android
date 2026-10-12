@@ -73,6 +73,7 @@ internal class LogEventUtils {
                 is LogEvent.GetCVV -> "card_cvv"
                 is LogEvent.GetPanCVV -> "card_pan_cvv"
                 is LogEvent.CopyPan -> "card_copy_pan"
+                is LogEvent.CopyCVV -> "card_copy_cvv"
                 is LogEvent.StateManagement -> "card_state_change"
                 is LogEvent.ConfigurePushProvisioning -> "configure_push_provisioning"
                 is LogEvent.GetCardDigitizationState -> "get_card_digitization_state"
@@ -90,6 +91,7 @@ internal class LogEventUtils {
                 is LogEvent.GetCVV,
                 is LogEvent.GetPanCVV,
                 is LogEvent.CopyPan,
+                is LogEvent.CopyCVV,
                 is LogEvent.StateManagement,
                 is LogEvent.ConfigurePushProvisioning,
                 is LogEvent.GetCardDigitizationState,
@@ -139,6 +141,7 @@ internal class LogEventUtils {
                 is LogEvent.GetCVV,
                 is LogEvent.GetPanCVV,
                 is LogEvent.CopyPan,
+                is LogEvent.CopyCVV,
                 -> {
                     propertyMap[KEY_CARD_ID] = this.readProperty<String>("cardId")
                     propertyMap[KEY_CARD_STATE] =
@@ -210,8 +213,8 @@ private fun buildTextStyleMap(textStyle: TextStyle) =
         putIfNotNullOrNotUnspecified<LocaleList>(textStyle, "localeList", null)
         putIfNotNullOrNotUnspecified<TextDecoration>(textStyle, "textDecoration", null)
         putIfNotNullOrNotUnspecified<Shadow>(textStyle, "shadow", null)
-        putIfNotNullOrNotUnspecified<TextAlign>(textStyle, "textAlign", null)
-        putIfNotNullOrNotUnspecified<TextDirection>(textStyle, "textDirection", null)
+        putIfNotNullOrNotUnspecified<TextAlign>(textStyle, "textAlign", TextAlign.Unspecified)
+        putIfNotNullOrNotUnspecified<TextDirection>(textStyle, "textDirection", TextDirection.Unspecified)
         putIfNotNullOrNotUnspecified<TextIndent>(textStyle, "textIndent", null)
     }
 

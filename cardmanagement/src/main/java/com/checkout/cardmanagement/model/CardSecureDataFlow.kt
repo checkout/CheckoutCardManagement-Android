@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.ui.platform.AbstractComposeView
 import com.checkout.cardmanagement.logging.CheckoutEventLogger
 import com.checkout.cardmanagement.logging.LogEvent
+import com.checkout.cardmanagement.logging.LogEventSource.COPY_CVV
 import com.checkout.cardmanagement.logging.LogEventSource.COPY_PAN
 import com.checkout.cardmanagement.logging.LogEventSource.GET_CVV
 import com.checkout.cardmanagement.logging.LogEventSource.GET_PAN
@@ -301,6 +302,66 @@ internal suspend fun Card.copyPanImpl(
         isLegacyRequest = isLegacyRequest,
         displaySecureData = {
             manager.service.copyPan(
+                cardId = id,
+                singleUseToken = singleUseToken,
+            )
+        },
+    )
+}
+
+/**
+ * Copies the security code (CVV/CVC) to the device clipboard with security features.
+ *
+ * The security code must be viewed in the current session before copying (call [getSecurityCode] or
+ * [getPANAndSecurityCode] first). Not supported on Android API 29-32 (Android 10-12L).
+ *
+ * Example usage:
+ * ```kotlin
+ * when (val result = card.copySecurityCode(singleUseToken)) {
+ *     is CardSecureDataResult.Success -> {
+ *         showToast("Security code copied to clipboard")
+ *     }
+ *     is CardSecureDataResult.Error.SecurityCodeNotViewed -> {
+ *         showError(result.message)
+ *         promptToViewSecurityCodeFirst()
+ *     }
+ *     is CardSecureDataResult.Error.UnsupportedApiVersion -> {
+ *         showError(result.message)
+ *         disableCopyFeature()
+ *     }
+ *     is CardSecureDataResult.Error -> {
+ *         showError(result.message)
+ *     }
+ * }
+ * ```
+ *
+ * @param singleUseToken Single-use authentication token for this operation
+ * @return Success (Unit), or specific error (SecurityCodeNotViewed, UnsupportedApiVersion, etc.)
+ * @since 3.0.0
+ */
+public suspend fun Card.copySecurityCode(singleUseToken: String): CardSecureDataResult<Unit> =
+    copySecurityCodeImpl(singleUseToken, isLegacyRequest = false)
+
+/**
+ * Internal implementation of [copySecurityCode] that accepts a legacy request flag for analytics.
+ *
+ * @param singleUseToken Single-use authentication token for this operation
+ * @param isLegacyRequest True if called from deprecated callback API, false if from suspend API
+ * @return Success (Unit), or specific error (SecurityCodeNotViewed, UnsupportedApiVersion, etc.)
+ */
+internal suspend fun Card.copySecurityCodeImpl(
+    singleUseToken: String,
+    isLegacyRequest: Boolean,
+): CardSecureDataResult<Unit> {
+    validateApiVersionForCopyPan()?.let { return it }
+
+    return getSecureDataSuspend(
+        logger = manager.logger,
+        successLogEvent = LogEvent.CopyCVV(cardId = id, state),
+        logEventSource = COPY_CVV,
+        isLegacyRequest = isLegacyRequest,
+        displaySecureData = {
+            manager.service.copySecurityCode(
                 cardId = id,
                 singleUseToken = singleUseToken,
             )

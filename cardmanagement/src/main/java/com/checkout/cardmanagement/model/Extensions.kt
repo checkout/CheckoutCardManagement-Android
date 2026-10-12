@@ -1,11 +1,16 @@
 package com.checkout.cardmanagement.model
 
+import java.util.Locale
+
 // Parse to Environment in Sian
 internal fun Environment.parse() =
     when (this) {
         Environment.SANDBOX -> com.checkout.cardnetwork.common.model.Environment.SANDBOX
         Environment.PRODUCTION -> com.checkout.cardnetwork.common.model.Environment.PRODUCTION
     }
+
+internal fun String.fromNetworkCardType(): CardType =
+    if (this.equals("physical", ignoreCase = true)) CardType.PHYSICAL else CardType.VIRTUAL
 
 internal fun com.checkout.cardnetwork.data.dto.CardState.fromNetworkCardState(): CardState =
     CardState.values().find { state -> state.name == name } ?: CardState.INACTIVE
@@ -32,3 +37,17 @@ internal fun CardRevokeReason.toCardNetworkRevokeReason(): com.checkout.cardnetw
     com.checkout.cardnetwork.data.dto.CardRevokeReason
         .values()
         .first { it.name == this.name }
+
+internal fun String.toCardType(): CardType =
+    when (this.trim().lowercase(Locale.ROOT)) {
+        "physical" -> CardType.PHYSICAL
+        "virtual" -> CardType.VIRTUAL
+        else -> CardType.UNKNOWN
+    }
+
+internal fun String?.toCardScheme(): CardScheme =
+    when (this?.let { it.trim().lowercase(Locale.ROOT) }) {
+        "visa" -> CardScheme.VISA
+        "mastercard" -> CardScheme.MASTERCARD
+        else -> CardScheme.UNKNOWN
+    }

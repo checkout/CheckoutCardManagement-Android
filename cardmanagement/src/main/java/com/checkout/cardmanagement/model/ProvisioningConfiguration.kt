@@ -8,6 +8,7 @@ package com.checkout.cardmanagement.model
  * @param serviceRSAModulus RSA Modulus in [ByteArray], from the key exchanged during onboarding.
  * @param serviceURL URL String for the Service endpoint
  * @param digitalCardURL URL String for the Digital Service endpoint
+ * @param visaClientAppId A nullable string identifier that can be obtained from your Visa configuration
  */
 public data class ProvisioningConfiguration(
     internal val issuerID: String,
@@ -15,6 +16,7 @@ public data class ProvisioningConfiguration(
     internal val serviceRSAModulus: ByteArray,
     internal val serviceURL: String,
     internal val digitalCardURL: String,
+    internal val visaClientAppId: String? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -27,6 +29,7 @@ public data class ProvisioningConfiguration(
         if (!serviceRSAModulus.contentEquals(other.serviceRSAModulus)) return false
         if (serviceURL != other.serviceURL) return false
         if (digitalCardURL != other.digitalCardURL) return false
+        if (visaClientAppId != other.visaClientAppId) return false
 
         return true
     }
@@ -37,6 +40,7 @@ public data class ProvisioningConfiguration(
         result = 31 * result + serviceRSAModulus.contentHashCode()
         result = 31 * result + serviceURL.hashCode()
         result = 31 * result + digitalCardURL.hashCode()
+        result = 31 * result + visaClientAppId.hashCode()
         return result
     }
 
@@ -47,5 +51,6 @@ public data class ProvisioningConfiguration(
             serviceRSAModulus = this.serviceRSAModulus,
             serviceURL = this.serviceURL,
             digitalCardURL = this.digitalCardURL,
+            visaClientAppId = this.visaClientAppId,
         )
 }

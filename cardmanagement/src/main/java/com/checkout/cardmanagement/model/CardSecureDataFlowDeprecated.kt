@@ -128,6 +128,33 @@ public fun Card.copyPan(
     }
 
 /**
+ * Copies security code (CVV/CVC) to clipboard with security features. The security code will only
+ * be copyable if it has first been viewed in the current session.
+ *
+ * @param singleUseToken Single-use authentication token for this operation
+ * @param completionHandler Callback that receives Result<Unit> indicating success or error
+ * @deprecated This callback-based API will be deprecated in a future version.
+ * Prefer the coroutine-based suspend copySecurityCode() which returns CardSecureDataResult.
+ */
+@Deprecated(
+    message =
+        "This callback-based API will be deprecated in a future version." +
+            " Use suspend copySecurityCode() instead",
+    replaceWith = ReplaceWith("copySecurityCode(singleUseToken)"),
+    level = DeprecationLevel.WARNING,
+)
+public fun Card.copySecurityCode(
+    singleUseToken: String,
+    completionHandler: (Result<Unit>) -> Unit,
+): Unit =
+    getSecureDataBridge(
+        completionHandler = completionHandler,
+        card = this,
+    ) { isLegacy ->
+        copySecurityCodeImpl(singleUseToken, isLegacy)
+    }
+
+/**
  * Internal helper function that bridges between the new sealed result pattern and the old callback pattern.
  *
  * This function:

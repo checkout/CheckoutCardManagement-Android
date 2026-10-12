@@ -26,6 +26,10 @@ public sealed interface CardSecureDataResult<out T> {
             override val message: String,
         ) : Error
 
+        public data class SecurityCodeNotViewed(
+            override val message: String,
+        ) : Error
+
         public data class UnableToPerformOperation(
             override val message: String,
             val cause: Throwable? = null,
